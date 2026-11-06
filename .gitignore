@@ -1,0 +1,31 @@
+# evidence / runtime artifacts
+evidence/
+playtest_shots/
+*.log
+.playtest_pid
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# local installs / temp
+*.bak-*/
+.install_test/
+tmp/
+
+# case-study: exclude original game assets (no data, no screenshots, no audio/images)
+case-study/data/
+case-study/**/screenshots/
+case-study/**/shots/
+*.wav
+*.mkf
+*.mpk
+*.dat
+*.FBP
+*.sav
+*.png
+*.jpg
+*.ogg
+*.mid
+*.mp3

@@ -1,0 +1,4 @@
+id,category,node,first_commit,fix_commits,fix_commit_count,fix_duration_min_est,design_layer,arch_review_location,status,evidence,notes
+"<缺陷编号，如 R76-STUTTER-1>","<类别：引导/输入/卡顿/VM/渲染/数据/其他>","<节点/轮次>","<首次修复 commit 或“无”>","<修复 commit 列表，分号分隔>",<修复 commit 数>,<修复用时估算分钟（发现→commit）>,"<是/否：是否设计层修复>","<ARCH_REVIEW/台账位置>","<状态：已修已验/已修待验/登记/待修/结案>","<证据编号/日志>","<现象→根因→修法一句话；同类第 N 次>""
+"示例-R76-STUTTER-1","卡顿","<节点>","abc1234","abc1234",1,60,"否","bug-ledger/DEV_REPORT","已修已验","rNN_hold_*；perf_before/after.log","BFS 每 30 帧全图+事件全扫→缓存/节流；冻结 270~361ms→0/83ms"
+"示例-R75-GUIDE","引导","<节点>","def5678","def5678;ghi9012",2,120,"是","ARCH_REVIEW §x","已修待验","rNN_*","提示与可走性不同源（同类第 8 次）→单一来源+可达校验"

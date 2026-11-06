@@ -1,0 +1,37 @@
+{
+  "name": "my-game",
+  "backend": "windows",
+  "launch": "C:\\Path\\To\\Game.exe",
+  "args": ["--windowed"],
+  "process_name": "Game",
+  "title_pattern": "*MyGame*",
+  "startup_ms": 8000,
+  "focus_before_key": true,
+  "shot_dir": "C:\\QA\\shots\\round1",
+  "capture": {
+    "method": "auto",
+    "dpi_aware": true,
+    "topmost_ms": 400,
+    "crop_hint": [0, 0, 1280, 800]
+  },
+  "keys": {
+    "default_hold_ms": 60,
+    "gap_ms": 550,
+    "allow_postmessage": true
+  },
+  "evidence": {
+    "dir": "C:\\QA\\evidence\\round1",
+    "manifest": "manifest.json",
+    "append_only": true
+  },
+  "metrics": {
+    "sessions_dir": "",
+    "window": null
+  },
+  "notes": {
+    "single_instance_rule": "同一时刻只允许一个被测窗口；测前关残留窗口并记录 pid",
+    "screenshot_method": "auto=PrintWindow 优先，空白回退屏幕拷贝（Vulkan/D3D 下 PrintWindow 可能全黑）",
+    "debug_keys": "调试快捷键只许开发自查，不得写进测试用例/验收证据",
+    "schema": "v2；旧 v1 字段（如 hint_region）向后兼容"
+  }
+}

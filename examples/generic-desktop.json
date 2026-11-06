@@ -1,0 +1,24 @@
+{
+  "name": "generic-desktop-app",
+  "backend": "windows",
+  "launch": "C:\\Program Files\\MyApp\\MyApp.exe",
+  "args": [],
+  "process_name": "MyApp*",
+  "title_pattern": "*MyApp*",
+  "startup_ms": 5000,
+  "focus_before_key": true,
+  "shot_dir": "C:\\evidence\\myapp\\shots",
+  "capture": {
+    "method": "auto",
+    "dpi_aware": true,
+    "topmost_ms": 400,
+    "crop_hint": [0, 0, 640, 80]
+  },
+  "keys": { "default_hold_ms": 60, "gap_ms": 300 },
+  "evidence": { "dir": "C:\\evidence\\myapp\\shots", "manifest": "C:\\evidence\\myapp\\manifest.json", "append_only": true },
+  "notes": {
+    "usage": "Any desktop app with a main window works: fill launch/title_pattern, then use PlaytestKit.ps1 keys/hold/shot and tools/probes.",
+    "if_keys_ignored": "Some apps ignore PostMessage; run PlaytestKit -Action focus first, or switch the backend to a SendInput variant (see CONTRACT.md 4.1).",
+    "capture_tip": "If PrintWindow returns blank frames the backend automatically falls back to CopyFromScreen; keep the window unoccluded."
+  }
+}

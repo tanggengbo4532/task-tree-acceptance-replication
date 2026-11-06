@@ -1,0 +1,167 @@
+{
+  "name": "game-playtest",
+  "version": "3.4.0",
+  "schema": 3,
+  "description": "4-Agent 四要素剧情树黑盒验收框架（人/地点/做到什么/时间=节点唯一标识）（引擎无关可插拔后端）：开发agent白盒设计覆盖所有使用线路的节点任务并修复；测试agent黑盒逐节点验收、维护经验库、困难即停；记录agent按固定六项归档；Lead 分发/验收/汇报。含「进度优先测试」（发现 bug 先存团队进度槽、下次从该进度续测，不从头重走）、「单次判定即通过」（节点 PASS 后不复测，仅用户新报该节点 bug 或该节点代码被修改才重开）、「单进度槽 + 留用户槽」（团队续测固定一个进度槽连续推进，至少留用户槽、用户槽只读不写）。含「双进度人机协同」（进度一=用户专用、团队只读绝不写；进度二=团队专用、可覆盖更新；用户已 PASS 的节点团队直接记 PASS 不复测；团队进度交用户复测，用户确认后双进度对齐到通过点；下一轮从用户进度一继续）。含「槽安全 + 自动化输入门禁」（用户槽不可变、任何情况不写用户槽、自动化只写团队槽；注入按键前必须截图/状态分类确认 UI=游戏世界，菜单/存档/对话框/战斗/过场禁止盲按；战斗恢复只轮询截图判定结束、禁止 SPACE×N 猜恢复；保存/读档必须显式槽位+归属校验、禁止默认槽位；误覆盖=P0 立即停手上报）。含 Windows 参考后端、截图/证据/探针工具、DSH 会话指标估算与安装脚本。",
+  "entry": "SKILL.md",
+  "skills": [
+    "SKILL.md"
+  ],
+  "engines": [
+    "godot",
+    "unity",
+    "web",
+    "electron",
+    "desktop"
+  ],
+  "platforms": [
+    "windows"
+  ],
+  "scripts": [
+    "scripts/windows/PlaytestKit.ps1",
+    "scripts/windows/Capture.ps1",
+    "scripts/PlaytestKit.ps1"
+  ],
+  "backends": [
+    {
+      "name": "windows",
+      "path": "scripts/windows/PlaytestKit.ps1",
+      "capture": "scripts/windows/Capture.ps1",
+      "platforms": [
+        "windows"
+      ],
+      "status": "reference",
+      "contract": "scripts/backends/CONTRACT.md"
+    }
+  ],
+  "tools": {
+    "probes": [
+      "tools/probes/walkprobe.py",
+      "tools/probes/holdprobe.py",
+      "tools/probes/fps_probe.py",
+      "tools/probes/common.py"
+    ],
+    "screen": [
+      "tools/screen/image_ops.py",
+      "tools/screen/crop_region.py"
+    ],
+    "evidence": [
+      "tools/evidence/manifest.py"
+    ],
+    "metrics": [
+      "tools/metrics/dsh_metrics.py"
+    ],
+    "tests": [
+      "tools/tests/selftest.py"
+    ],
+    "verify": [
+      "tools/verify/common.py",
+      "tools/verify/hud_walker.py",
+      "tools/verify/anchor_check.py",
+      "tools/verify/run_verify.py",
+      "tools/verify/selftest.py"
+    ]
+  },
+  "references": [
+    "scripts/backends/CONTRACT.md",
+    "examples/godot-project.md",
+    "templates/playtest.json",
+    "references/roles/lead.md",
+    "references/roles/developer.md",
+    "references/roles/tester.md",
+    "references/roles/recorder.md",
+    "references/standards/no-cheat.md",
+    "references/standards/slot-safety.md",
+    "references/standards/anchors-and-saves.md",
+    "references/standards/evidence-and-acceptance.md",
+    "references/standards/experience-library.md",
+    "references/standards/engineering-patterns.md",
+    "references/standards/troubleshooting.md",
+    "references/testing/playbook.md",
+    "references/testing/probes-and-metrics.md",
+    "references/testing/case-studies.md",
+    "references/testing/efficiency.md",
+    "templates/anchor-ledger.md"
+  ],
+  "templates": [
+    "templates/playtest.json",
+    "templates/tester-prompt.md",
+    "templates/developer-prompt.md",
+    "templates/lead-dispatch.md",
+    "templates/task-tree.md",
+    "templates/experience-log.md",
+    "templates/bug-ledger.md",
+    "templates/recorder-log.md",
+    "templates/report-template.md",
+    "templates/acceptance-report.md",
+    "templates/acceptance-report-user.md",
+    "templates/node-metrics.csv",
+    "templates/defect-table.csv",
+    "templates/ablation-plan.md",
+    "templates/anchor-ledger.md",
+    "templates/evidence-index.md"
+  ],
+  "examples": [
+    "examples/pal98-godot.json",
+    "examples/generic-desktop.json",
+    "examples/godot-project.md"
+  ],
+  "install": {
+    "entry": "install.ps1",
+    "target": "%USERPROFILE%\\.dsh\\skills\\game-playtest",
+    "options": [
+      "-Target",
+      "-Force",
+      "-DryRun",
+      "-Backup"
+    ]
+  },
+  "conventions": {
+    "playtest_schema": "templates/playtest.json",
+    "playtest_schema_version": 2,
+    "evidence_layout": {
+      "dir": "evidence/",
+      "shots": "evidence/shots/",
+      "manifest": "evidence/manifest.json",
+      "reports": "evidence/reports/"
+    },
+    "single_instance": true,
+    "backend_contract": "scripts/backends/CONTRACT.md",
+    "task_tree_doc": "_playtest_regress/task-tree-v8.md"
+  },
+  "requires": {
+    "python": ">=3.8",
+    "powershell": ">=5.1",
+    "os": "windows"
+  },
+  "selfcheck": [
+    "python tools/tests/selftest.py",
+    "powershell -NoProfile -File install.ps1 -DryRun",
+    "powershell -NoProfile -File tests/Test-Plugin.ps1",
+    "python tools/verify/selftest.py"
+  ],
+  "keywords": [
+    "qa",
+    "acceptance",
+    "blackbox",
+    "playtest",
+    "automation",
+    "agent",
+    "task-tree",
+    "experience",
+    "evidence",
+    "engine-agnostic",
+    "backend",
+    "progress-first",
+    "single-verdict",
+    "single-progress-slot",
+    "dual-progress",
+    "user-slot",
+    "team-slot",
+    "user-acceptance",
+    "slot-safety",
+    "user-slot-immutable",
+    "input-gate"
+  ],
+  "license": "MIT"
+}

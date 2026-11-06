@@ -1,0 +1,26 @@
+{
+  "name": "pal98-godot",
+  "backend": "windows",
+  "launch": "C:\\Tools\\Godot\\Godot_v4.7.2-stable_mono_win64.exe",
+  "args": ["--path", "C:\\Projects\\MyGame", "res://main.tscn"],
+  "process_name": "Godot*",
+  "title_pattern": "*MyGame*",
+  "startup_ms": 9000,
+  "focus_before_key": true,
+  "shot_dir": "C:\\evidence\\round01\\shots",
+  "capture": {
+    "method": "auto",
+    "dpi_aware": true,
+    "topmost_ms": 400,
+    "crop_hint": [60, 145, 1160, 100]
+  },
+  "keys": { "default_hold_ms": 60, "gap_ms": 550, "allow_postmessage": true },
+  "evidence": { "dir": "C:\\evidence\\round01\\shots", "manifest": "C:\\evidence\\round01\\manifest.json", "append_only": true },
+  "metrics": { "sessions_dir": "%USERPROFILE%\\.dsh\\storages\\session_projcache\\sessions", "window": null },
+  "notes": {
+    "sanitized": true,
+    "how_to_fill": "Replace launch/args/shot_dir with your own absolute paths. Keep title_pattern specific to avoid killing an editor window.",
+    "single_instance_rule": "Only one game window at a time; close leftovers before launch; never launch while a human is testing.",
+    "debug_keys_developer_only": "F-keys/debug HUD belong to the white-box developer agent; black-box testers must not use them (no cheating)."
+  }
+}

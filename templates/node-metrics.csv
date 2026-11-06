@@ -1,0 +1,4 @@
+node,rounds,exec_minutes,node_window_minutes,token_est,token_source,one_pass,build,evidence,notes
+"<节点编号/名称>","<轮次，如 9 轮 / R3~R16>",<执行分钟（黑盒实机）>,<节点窗口分钟（含开发+测试+记录；可留空）>,"<token 估算值（输入+输出；无数据留空并标待估）>","<来源：metrics 工具/手工估算/无>","<是/否：是否首轮黑盒即通过>","<构建 hash>","<证据前缀/编号>","<备注：卡点/缺陷/未覆盖>"
+"示例-节点A","1 轮",12.2,387.0,"1200000（估算）","tools/metrics/dsh_metrics.py","否","abc1234","rNN_p0_*；白盒日志","阻塞→修复后通过；执行=黑盒轮，窗口=含dev探针"
+"示例-节点B","9 轮",216.0,620.0,"2600000（估算）","tools/metrics/dsh_metrics.py","否","def5678","rNN_a*_r1~r9","修复 7 commits；未覆盖项：<…>"
