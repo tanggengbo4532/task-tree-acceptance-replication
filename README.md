@@ -30,6 +30,7 @@
 - `tools/` — 量化探针、截图工具、证据清单、验证自动化（hud_walker 等）
 - `examples/` — 接入示例（脱敏）
 - `case-study/` — **案例**：PAL98 Godot 移植的**初始 bug 版**源码（用于复现验收过程）
+- `experiments/` — **实验数据与可复现包**：HUD 54 runs、经验消融 24 runs、repro 清单与审计（见 `experiments/README.md`）
 
 ## 安装
 

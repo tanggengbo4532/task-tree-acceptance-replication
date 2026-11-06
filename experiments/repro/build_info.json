@@ -1,0 +1,38 @@
+{
+  "paper": "IST (Information and Software Technology) evidence supplement",
+  "generated_at": "2026-11-06",
+  "code_head": "f9972eb9670e6eea0ad612bd687d43ccedd43e43",
+  "build": "R311",
+  "paper_commit_at_generation": "B/C commit follows; see git log/receipt",
+  "godot": "4.7.2.stable.mono.official",
+  "python": "3.12.14",
+  "harness": {
+    "probe": "_playtest_regress_dev/round78/dev3_probe.py",
+    "runner": "_playtest_regress_dev/round78/run_probe_stream.py",
+    "guarded_runner": "_playtest_regress_dev/round78/run_paper_eval_guarded.py",
+    "ist_runner": "_playtest_regress/paper/ist/ist_runner.py",
+    "ablation_runner": "_playtest_regress/paper/ist/ablation_runner.py"
+  },
+  "slot_policy": {
+    "team_slot": 2,
+    "user_slot": "slot1 read-only; never load/save; harness before/after hash guard",
+    "forbidden": [
+      "slot1 write",
+      "slot3/4/5/9 writes"
+    ]
+  },
+  "fixed_fps": 240,
+  "experiments": {
+    "A": "6 routes x 3 variants (A/B/C) x 3 seeds = 54 runs; hud_eval_runs.csv",
+    "B": "4 nodes x 3 conditions x 2 seeds = 24 runs; ablation/experience_ablation.csv"
+  },
+  "excluded_resources": [
+    "PAL98 commercial game data/assets (proj/... , Data.mkf, Map.mkf, FBP, etc.)",
+    "user slot saves"
+  ],
+  "reproducibility_note": "Hashes in manifest.json cover only paper artifacts/harness text and logs; no commercial game resources are copied.",
+  "ablation": {
+    "file": "ablation/experience_ablation.csv",
+    "runs": 24
+  }
+}

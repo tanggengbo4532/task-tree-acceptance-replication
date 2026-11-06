@@ -1,0 +1,21 @@
+STDOUT
+[HARNESS-GUARD] slot1 before=8880c3219a03ba0c5c37402304c97cfd1ae296158aeba452a9b08830fbd9fe53
+[HARNESS-GUARD] slot1 forbidden; template initialized with team slot2
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
+[PALTables] objects=565 enemies=154 teams=380 magics=104 fields=58 stores=21 words=565
+[PALText] init: msgs=13513 words=565 icons=3 palette=256
+[save] LOAD slot=2 current_loaded=2
+[r72] === slot=2 mode=normal
+[r72] S0 loaded scene=255 pos=(0, 0) viewport=(1520, 1528) cash=11438 vars={"a10_stage":1.0,"a11_stage":1.0,"a12_stage":1.0,"a13_stage":1.0,"a18_stage":1.0,"a24_stage":1.0,"a25_stage":1.0,"a26_clue":1.0,"a26_item":1.0,"a26_stage":1.0,"a28_stage":1.0,"a30_cave_passed":1.0,"a30_s69_cave1":0.0,"a30_s69_cave2":0.0,"a30_s69_phase":2.0,"a30_stage":1.0,"a31_stage":1.0,"a32_clue1":1.0,"a32_night_started":1.0,"a32_stage":1.0,"a33_backyard":1.0,"a33_backyard_done":1.0,"a33_down":1.0,"a33_stage":1.0,"a33_stairs":1.0,"a34_case":1.0,"a34_done":1.0,"a34_room":1.0,"a34_stage":4.0,"a35_stage":1.0,"a35_talked":1.0,"a36_route":1.0,"a36_stage":1.0,"a37_stage":1.0,"a38_stage":1.0,"a39_stage":1.0,"a40_stage":1.0,"a41_stage":1.0,"a42_stage":1.0,"a43_stage":1.0,"a44_stage":1.0,"a44_started":1.0,"a45_stage":1.0,"a46_stage":1.0,"a47_stage":1.0,"a48_stage":1.0,"a49_fight_started":0.0,"a49_stage":0.0,"a4_drunk_talk_done":true,"a50_ready":0.0,"a50_stage":0.0,"a5_s4_lady_talked":true,"a7_arrived":true,"a8_stage":1.0,"a9_stage":1.0,"battle_result":0.0,"battle_reuse_actions":{"0":{"id":348.0,"target":1.0,"type":3.0},"1":{"id":297.0,"target":0.0,"type":3.0},"2":{"id":0.0,"target":1.0,"type":2.0},"4":{"id":394.0,"target":1.0,"type":3.0}},"battle_team":113.0,"cave_door_70_evt":5078.0,"cave_door_a_evt":5078.0,"cave_door_b_evt":5082.0,"cur_playing_rng":1.0,"exp_scale_v2":true,"exp_scale_v3":true,"last_unequipped_item":248.0,"lidan_hall_talk_done":true,"magic_base_damage":{"394":564.0},"object_word_override":{"435:2":0.0},"s75_new_exit_evt":5078.0,"scene2_intro_done":true}
+[BUILD] R311-a49-once floor-source=location_name
+[save] LOAD slot=2 current_loaded=2
+[guard] scene=253 map=189 view=[P: (1536, 1560), S: (320, 200)] bbox=(16.0, 0.0, 2048.0, 1856.0) filled=0/240 ratio=0.0 -> moved to (1016, 932)
+[ist] {"battle":true,"dialog":false,"end_N":0,"end_pos":"(336, 376)","end_scene":253,"frames":32,"invalid_moves":0,"mis_trigger":false,"moved":3,"no_key":0,"path_deviation_abs":-7,"path_deviation_ratio":0.3,"recovery_count":0,"route":"R4","seed":202,"shortest":10,"start":"(1680, 1640)","start_N":10,"start_scene":255,"steps":3,"success":true,"target":"(1680, 1720)","time_ms":2318,"variant":"B","vm_active":true,"wrong_direction":1}
+[r72] DEV3 IST end scene=253 pos=(336, 376) hall=false busy=true dlg=true hint=黑苗王宫：已走到宫门决战点，进入终战（第 7 章 G2） floor=黑苗王宫外：走到决战点（自动触发决战） exit_cell=(-1, -1) near=false trig=0
+[r72] === RESULT fails=0 notes=0 moves=0
+[r72] MOVES 
+EXIT 0
+[HARNESS-GUARD] slot1 after=8880c3219a03ba0c5c37402304c97cfd1ae296158aeba452a9b08830fbd9fe53
+
+STDERR

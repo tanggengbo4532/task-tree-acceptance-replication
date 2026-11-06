@@ -1,0 +1,662 @@
+{
+  "generated_at": "2026-11-06",
+  "code_head": "f9972eb9670e6eea0ad612bd687d43ccedd43e43",
+  "build": "R311",
+  "godot": "4.7.2.stable.mono.official",
+  "python": "3.12.14",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "scope": "IST paper artifacts + test harness; commercial game data/assets are deliberately excluded",
+  "excluded": [
+    "proj/ game assets/data",
+    "PAL98 commercial resources",
+    "user slot files"
+  ],
+  "files": [
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\ablation_meta.json",
+      "sha256": "3508f2024496a12d941f74e39a42cb1431689909df2aa75fe6a10cc87db8b2e7",
+      "bytes": 611
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\experience_ablation.csv",
+      "sha256": "5f547227fe3a56cf12d23e1995683978854707766a2808a3dba69e0fdfc0e995",
+      "bytes": 6045
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\experience_ablation_summary.json",
+      "sha256": "56fe299f7647e7fea7f8254cf7dae1ba5a2884f4d8b75d9806144038900dea97",
+      "bytes": 4100
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_clear_context_seed101.txt",
+      "sha256": "fd16c3bb19d1acb9f9de4e9df99104ba18b71935dd160de80176abafe68b2844",
+      "bytes": 2996
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_clear_context_seed202.txt",
+      "sha256": "3b552a9584c5af1711dd290e4c659f7c3fd71515924742c426d1262c9960f6c1",
+      "bytes": 2996
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_no_rules_seed101.txt",
+      "sha256": "d716e5cc6f9ebccb1cc07558d09044cf73bd55f6cc9147ac62e8208b3750338e",
+      "bytes": 2991
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_no_rules_seed202.txt",
+      "sha256": "6b32e7877d1626e355deddd4ad1bdc336498a65343da9433aab19501bd972716",
+      "bytes": 2991
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_with_rules_seed101.txt",
+      "sha256": "e048e26093bf2cd64fcfcaea8676c49df1c227471f9abd7f5c16fe423a4c0a3a",
+      "bytes": 3009
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R1_with_rules_seed202.txt",
+      "sha256": "2099e3b54411dd21fc7d498c5b60f36b77fe0d97ee9741d01cdaf7d7c17da5c6",
+      "bytes": 3008
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_clear_context_seed101.txt",
+      "sha256": "bb6f5e2db04b9ba47831ed43bc6d037a0dbbd89cacc62119413c7dddd56e5b6a",
+      "bytes": 2723
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_clear_context_seed202.txt",
+      "sha256": "9952537a429be39b49d15604311103372776a096ec9ebadbd87acc8a620279f3",
+      "bytes": 2723
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_no_rules_seed101.txt",
+      "sha256": "7dfd055f7b437a7fbdec6a7606bc56b7e6832708981e95d253ca85ca0cfd5931",
+      "bytes": 2718
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_no_rules_seed202.txt",
+      "sha256": "457a42df986b60a7e22730f76e47351c787b783a828600e19bd97e24201d799f",
+      "bytes": 2718
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_with_rules_seed101.txt",
+      "sha256": "d87ff10fa92023144d9247db0c811e031a45824df4833c572d1200fec804682f",
+      "bytes": 2638
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R3_with_rules_seed202.txt",
+      "sha256": "8e7b5c40ad1652aeb01e8cee96f8ac53edac732174c4cfcca2f4529e6c50f840",
+      "bytes": 2638
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_clear_context_seed101.txt",
+      "sha256": "963957b001520e8911b797553b8f54df413c16c1f60c045a9c7d61e1783bf2d6",
+      "bytes": 3134
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_clear_context_seed202.txt",
+      "sha256": "eea3eaffcf80673664e23fe9790788737c522dd77f2f6b0ce0e9ab7f7e44d9b7",
+      "bytes": 3134
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_no_rules_seed101.txt",
+      "sha256": "ed0cfbfa1cafe9bfa4b2ab47c25cf6649668b26d8663d429df09242724e059a0",
+      "bytes": 3129
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_no_rules_seed202.txt",
+      "sha256": "64b76ca77052df7853a661d4ab081560053cef83d566c857eb27bf1f1db2da33",
+      "bytes": 3129
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_with_rules_seed101.txt",
+      "sha256": "d6a1d99417d2c939f40e969122972a6e9bb12763ad4eef8fbff673baa35048ea",
+      "bytes": 3131
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R4_with_rules_seed202.txt",
+      "sha256": "091257da4b3c383c2a5582f2f7c397db68365e016b0346764163c5044fc77312",
+      "bytes": 3131
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_clear_context_seed101.txt",
+      "sha256": "d90fa586cfd477981fc3ae03aefb7c5eb1a45351aef1ad63df439d9e337bcc42",
+      "bytes": 2618
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_clear_context_seed202.txt",
+      "sha256": "229a91408059e6e04245fd38e919b5c748bc9a2a4beab99402d38a022b0cbcc2",
+      "bytes": 2618
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_no_rules_seed101.txt",
+      "sha256": "3f41dda412ea2e139cc38cbb424ce78e7c83d42f16f158366c2c31f0c73fea9b",
+      "bytes": 2613
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_no_rules_seed202.txt",
+      "sha256": "ab9b95549d6492891268b2de08a6890367a75dc6ffa1a4d9131458aafd347793",
+      "bytes": 2613
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_with_rules_seed101.txt",
+      "sha256": "8665cff79306577b434a974f04307a7550652de34568a2afab5cf52a3f71f603",
+      "bytes": 2602
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation\\raw\\R6_with_rules_seed202.txt",
+      "sha256": "ab65a4542d047d178fffed7280f79538a0192eb17bbc56e535ff2ee685190db8",
+      "bytes": 2602
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation_runner.py",
+      "sha256": "c43cbe242e013c5f8c6678045a58b699f7f5422954bd1b1265e0e268dc45411e",
+      "bytes": 4020
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation_stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ablation_stdout.txt",
+      "sha256": "5c1cb6d8d7a907e3d9e8444a89af06f2a1b746265f5b89b71e6525e836f2a11b",
+      "bytes": 12982
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\experience_ablation.md",
+      "sha256": "aaaf97e0bdaf7cb86446f1cb531014a4e603b4374a7679920c74156f5ee0037a",
+      "bytes": 4822
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\full_stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\full_stdout.txt",
+      "sha256": "1fdf02db5cc885a241126dd7f94972645a73b843c5987597bbc4dcc1fcd799d3",
+      "bytes": 28406
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\hud_eval_runs.csv",
+      "sha256": "5d51e89dc8f3440d71d5e57e6fb543178f95fa5e77c13609ada54c989ed6d615",
+      "bytes": 21915
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\hud_eval_summary.json",
+      "sha256": "fb45adcf95fe5e6c814c83e51be9f9bf0f6514fcd5738c91806e454b07a062be",
+      "bytes": 6204
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\hud_eval_summary.md",
+      "sha256": "2048d84cd47067b447f96a7a09349ad7984a3e69db4a7b8f733418c329e47a11",
+      "bytes": 6928
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\ist_runner.py",
+      "sha256": "06ce4317e6dc2975695d82ec93aa9f471a66acf1d8ea9e8c7c112e259976f789",
+      "bytes": 5462
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\postprocess_a.py",
+      "sha256": "4b9d663c17577900137e2b3d944b6de86948f7106c00dd249e7e8cbb8fbbf029",
+      "bytes": 4929
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_final.csv",
+      "sha256": "3adbbdc0f8edd9bcf852f094e082cbe90443bef05355314c1c132cfa430546f5",
+      "bytes": 1638
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_meta.json",
+      "sha256": "fcec6bffe2955cd331e30a0c11d5eb731d1772a2cd70f996086194d1c23570f3",
+      "bytes": 395
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_runs.csv",
+      "sha256": "e4c5bb06356fd32bacd036a50e79c0f6848c0230a864ffa74f1059a3387cb194",
+      "bytes": 2730
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stderr.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stderr2.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stderr3.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stdout.txt",
+      "sha256": "5749cdb3ea12789194154ae9e3616114ba44fddb835c9514007965caf512e84b",
+      "bytes": 5242
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stdout2.txt",
+      "sha256": "5c99dd626e1111d21e3ad44d8e374d13787f79cba1add960ce88693b85166386",
+      "bytes": 7768
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\preflight_stdout3.txt",
+      "sha256": "3e2966f456fe1b02f99339457ad0f048b235de98796ee805aecf9ae863398866",
+      "bytes": 9452
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_A_seed101.txt",
+      "sha256": "7bd6a8da15c40200c8a909760d75d57e39d055d940b99af81c06bf7432397db9",
+      "bytes": 2979
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_A_seed202.txt",
+      "sha256": "3fdc073403023b55e00e5edeb4cf4d064c4663a7aadbcd8b09a00144c8f58295",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_A_seed303.txt",
+      "sha256": "ef00373906a195d08b10a84ec2b2983fe32b85cbe7020c75eeabccb2f3a1ac9d",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_B_seed101.txt",
+      "sha256": "41436af5ade3f332ede9c2886b326335c27b6ec0d7c71e9aaece0a3c7b80ee50",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_B_seed202.txt",
+      "sha256": "762e76ac0b82fa54cc86dde171202e465b387002a90ff6092f5f5da88ec5845f",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_B_seed303.txt",
+      "sha256": "0673fb7a64bee40cad4f217f34a8db364e60cbdc5532733f87ebdad0bdf89345",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_C_seed101.txt",
+      "sha256": "976c597bf1a605afc0284c6386819fef3f3b3c04bae1f3c7957c8a5e150a6896",
+      "bytes": 2996
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_C_seed202.txt",
+      "sha256": "4aad6c75eabcae65e43c6e7af7449ca4c4eec3feb0ba79b11386e756dfef5069",
+      "bytes": 2996
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R1_C_seed303.txt",
+      "sha256": "97fe49f238ab10c60b0881906e7a2042b3fa0fc5b8cd01bc2267f16f086ab976",
+      "bytes": 2997
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_A_seed101.txt",
+      "sha256": "afea6cf4f0b65498c03fcd4a3c72cd5c92c176f21c271d3fd05817f393ff1605",
+      "bytes": 2984
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_A_seed202.txt",
+      "sha256": "fa3aa9590a89df66c95f91e6cb0ae4e07de093c5f619a859575003b1da5189fb",
+      "bytes": 2984
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_A_seed303.txt",
+      "sha256": "1c2def6103ec03344d8ee9d60b3fcde72ca15516044f24099497b590ffbdf472",
+      "bytes": 2984
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_B_seed101.txt",
+      "sha256": "e168daadbadc082040c305c52a04cb1c82225ab8dd2ebe777b7004fa7d08f94c",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_B_seed202.txt",
+      "sha256": "92f8cbd49cbe4c6721f211800ad2688a434259d038065a4cc3d42474ca3beef9",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_B_seed303.txt",
+      "sha256": "7e10d7b3871f41b50cbb0e24b64277b4a4aca58bec010ec4751ab1d84bf2114e",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_C_seed101.txt",
+      "sha256": "00229a40cc10be6fb969aba69fc27a9622300d76ec050f90719e2981e1a5410c",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_C_seed202.txt",
+      "sha256": "c7070de08f1ce7351231dc81ecfe85d0ca3e5c66ea4a1a380a34bfb713594620",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R2_C_seed303.txt",
+      "sha256": "9dd447f74eaee3a6cfad3a3b62efdcd7f7ef055f27eb59fab00ffa6ee5a3f4cc",
+      "bytes": 2982
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_A_seed101.txt",
+      "sha256": "ee1f16ef69475195b7dc178d0487804aa23b8bbc4209a30a4a46a5fc2880b598",
+      "bytes": 2710
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_A_seed202.txt",
+      "sha256": "337d981cd67e0f9b3a466727f76a6aa3ed6cf1087c6b91a80409f3c69d478c5c",
+      "bytes": 2710
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_A_seed303.txt",
+      "sha256": "7754a5a9c059147a65cd32b2008bcb5328022e9aba56264c646a41308005401f",
+      "bytes": 2710
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_B_seed101.txt",
+      "sha256": "34a370725c4eaf27ef6402e4c1d37f973d4da4adf7b2858decd8f84a6111c661",
+      "bytes": 2709
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_B_seed202.txt",
+      "sha256": "cdeb6dc460bf4460b5c3fbff9afdd770d7a28cac0be896d1f878a11551d38f13",
+      "bytes": 2709
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_B_seed303.txt",
+      "sha256": "61f45df73aa350ee0f36736f1f6db8efaba45392ce66cff9ab323c34455bab73",
+      "bytes": 2709
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_C_seed101.txt",
+      "sha256": "c27d777e052978260b941f08ca8b17aeabd9ba8f5d21316bb56618f64c079435",
+      "bytes": 2614
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_C_seed202.txt",
+      "sha256": "16b789c163483762262cf324510fc1ff7d78e39bf6ea20a39f90e6f948409e9d",
+      "bytes": 2614
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R3_C_seed303.txt",
+      "sha256": "e7dc80c0473aa1515c7d23eae4fe8f566e4eb049b21b25bfbb5ed9be8180b35a",
+      "bytes": 2614
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_A_seed101.txt",
+      "sha256": "5dcb976d723a2c076e4d1fae9b137d67854a955b2c52d4275460272f460ee66e",
+      "bytes": 3124
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_A_seed202.txt",
+      "sha256": "abaaf5d78748e549bbc1468db451ba92b93865dbf95b77c0c1da6f623b0cebe7",
+      "bytes": 3080
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_A_seed303.txt",
+      "sha256": "75e46aa142b3215aa9db862b791eeb3c643db7a4e4b3be599e2638c5bd7634e6",
+      "bytes": 3124
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_B_seed101.txt",
+      "sha256": "f3fee4ce0cb72b22806214e076f722a95e2ac3c5104aa16967db2a329cb5e123",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_B_seed202.txt",
+      "sha256": "a8ce385cd05ac07b5fd0f16b86fa39c2e6d3de6e9b4e5594c83f69d418240777",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_B_seed303.txt",
+      "sha256": "32ae75435952ea54f55386aba7b9fc3e4da799d8286db92f9e60583431b55ba1",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_C_seed101.txt",
+      "sha256": "4f89e4a73bab5350d5a16189b107e5eca934187b4eb082bb19052382105afcbe",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_C_seed202.txt",
+      "sha256": "7e543b487d33f20564753dafd6d2c33f07fd905d1a72b9eabfa78a963ca5bed2",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R4_C_seed303.txt",
+      "sha256": "82f4630c2f23605284522da7a9b1bfe482af563e490db9ec827c7d8869abccf7",
+      "bytes": 3120
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_A_seed101.txt",
+      "sha256": "f018c69d2302117f2b4f9ce909e424afa9f0491bab1f1faca36f848ccf414af6",
+      "bytes": 2943
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_A_seed202.txt",
+      "sha256": "b8e059ed9cd9e1a53a9132e1d117537741727b676f7bfcbbe0efabeb59081044",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_A_seed303.txt",
+      "sha256": "19f7dea4c4fc0991b066853603b2d27bab013e5a67d28ad234a74705ff1cf346",
+      "bytes": 2799
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_B_seed101.txt",
+      "sha256": "412bcbe26ade03d52e6dcb1818278da4e7446bfbb8c5915c3e54ffa509a2d71f",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_B_seed202.txt",
+      "sha256": "15b976352799ece8fa91d7609ea5306d26f9baa2d78266e0b3485334d81a43fa",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_B_seed303.txt",
+      "sha256": "2878f5febfde7dbbc688696e1f0a59e804a917fe1ba47ca5bd750e472c9e263b",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_C_seed101.txt",
+      "sha256": "acd5d63aaea98af5d9c66740afb93f1b8682c2ad309560ca5e37c18a8613e642",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_C_seed202.txt",
+      "sha256": "1e99728a04483763da4d73b1ff401921334e2d960994191cfd914b985ed44d72",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R5E_C_seed303.txt",
+      "sha256": "9b191f8265cff7d9c9d8444227599cf6e95d5afb664e6fd899e0ccd5c440ca82",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_A_seed101.txt",
+      "sha256": "eb6bb197eafa514afd64575bbb321e3518b410f838f9210a61954ac1afd654b2",
+      "bytes": 2612
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_A_seed202.txt",
+      "sha256": "0870216ee26af80674a07440bd3f0fc9b5cb775f4b538bd696e225a1729264c3",
+      "bytes": 2604
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_A_seed303.txt",
+      "sha256": "dd2457e4b4295060d656f253b2303a8a0a1ed1865d375f0ca60a164b9e24f55c",
+      "bytes": 2606
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_B_seed101.txt",
+      "sha256": "5d7555caee48e52d95f77399d0804f2d1080e3353d44333384fed54abfcd74f4",
+      "bytes": 2604
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_B_seed202.txt",
+      "sha256": "7e13af5842e038bb9fccccd394814a0cef5e11c6e66be0f826d2300b22a8c95e",
+      "bytes": 2604
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_B_seed303.txt",
+      "sha256": "e4d3267dcefe9aca2704876279920234cc25b278f2cbc853655640b9d4b180c8",
+      "bytes": 2604
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_C_seed101.txt",
+      "sha256": "a1820545b014bcdd76c99e684eda352b5f10dab2065b3678c4939f988b3b3e5a",
+      "bytes": 2606
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_C_seed202.txt",
+      "sha256": "7b5e7d2ff3cc5d529b89b97185b59a0270a7787f6dc0517326d06db8fce84d0b",
+      "bytes": 2606
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\full_R6_C_seed303.txt",
+      "sha256": "9ad090e105bfd1c1d97d31dc801c6c978f533e442fe1182b6869864b83d2201f",
+      "bytes": 2606
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R1_C_seed101.txt",
+      "sha256": "6473ec66cc91b6bfd3a0aa213c93b35c5d172d7d0c7239c66ccbe6c16e0796d3",
+      "bytes": 2997
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R2_C_seed101.txt",
+      "sha256": "b655b44256a1f24a7f3cd0e82133d547239d058badc24196c0f0280e2a0c54ba",
+      "bytes": 2981
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R3_C_seed101.txt",
+      "sha256": "5d87778e849d7733a8c3d3916b31e9c2f433c4b274b56de9f02c6c005d2f70eb",
+      "bytes": 2613
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R4_C_seed101.txt",
+      "sha256": "cb08958aa67cc6df5a6c0ad599661c830bfb917b4c0217acf08455fb7f1b525b",
+      "bytes": 3119
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5A_C_seed101.txt",
+      "sha256": "9bcd41067e0b4af2dd6e33a4a053ce4b221269e68d38a0e20cb3606a9dca978b",
+      "bytes": 2795
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5B_C_seed101.txt",
+      "sha256": "753e88a2f5cb01377b33a83690b89f57570d1bb9b8a7b10650727ec5b632776a",
+      "bytes": 2888
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5C_C_seed101.txt",
+      "sha256": "4573a549afd10c917132e69387b75ad27c54ec2cc0058f8cc2803e013fc02958",
+      "bytes": 2683
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5D_C_seed101.txt",
+      "sha256": "a92fa84832a7bdd4d68dbb7a9073c1c721869f66bf840a25aa920c95b037246e",
+      "bytes": 2716
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5E_C_seed101.txt",
+      "sha256": "35d21ea6da26aa6f1ae3e0a71d697c9e8727a80b039c4be650cdbb103531ae75",
+      "bytes": 2794
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R5_C_seed101.txt",
+      "sha256": "4cead0f37ead13b42e21085cba07336400d0cfb4fc922fb865751435a21573d7",
+      "bytes": 2942
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\raw\\preflight_R6_C_seed101.txt",
+      "sha256": "2c4ce293daefbb822d7961bb3c9c376f39362f79ecc41c6fc02ef430211e648a",
+      "bytes": 2605
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\README.md",
+      "sha256": "4cd6ff6a467e3b7cfc2f0a33c3d46692d1295beda2a8cdc5cdec465990d3df2c",
+      "bytes": 2622
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\audit\\SNAPSHOT_NOTE.md",
+      "sha256": "7c6fc29c011bcb910ffc5a0598ab8c2405292460eaa1a7c6eb75cdc8b484b63d",
+      "bytes": 444
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\audit\\tester-report-paper-audit.md",
+      "sha256": "e621dfd34921ec405036e1030c0d0e2e0eeb8a5a7beaf2d527caa3c003352ebe",
+      "bytes": 14421
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\build_info.json",
+      "sha256": "248c20590e94bda2bbc6db5a13d9519b9d71bdbfbea5365ba1a3a1d5f4e1bc30",
+      "bytes": 1507
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\build_manifest.py",
+      "sha256": "fc319f6732db52c799cb21352dc4abe7762a63428c49e2c46877d0672cb7b3e0",
+      "bytes": 2041
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\commands.txt",
+      "sha256": "b67481dd6ab6aa918a40f8c6e061a7ad86e90f7e5ea3bbc6026fcf556cf8423f",
+      "bytes": 1171
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\experience\\EXPERIENCE_NODES.md",
+      "sha256": "c4fcf8c666d58658a71233e28b0f93fbcd5647a17a2058f7712b6fe15ee16d2e",
+      "bytes": 6291
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\experience\\round78_EXPERIENCE.md",
+      "sha256": "04d90f4337d94509dea94b406475dda4c2b12ce4c7f573a7a58a8e86ccff49f8",
+      "bytes": 3557
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\experience_rules_applied.md",
+      "sha256": "a41406fe7ebf8f2aab5ee938f25da14e19700c58d215074b64aa053f4f11d89a",
+      "bytes": 2529
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\repro\\task_tree\\mainline-task-tree_v56.md",
+      "sha256": "c178c2e7a6f566d6c2205febac4afbfffb5954241b67e68e988419c395a391db",
+      "bytes": 36819
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\route_matrix.csv",
+      "sha256": "8c43bffdbe927ccc4032834f8ef6d54c5e263ecad52182dda7504a9179a26583",
+      "bytes": 2518
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\route_matrix.md",
+      "sha256": "5419548e17a397b2ca7019709520b6b42c40d9f5444eebe529f715fd2ded326d",
+      "bytes": 3837
+    },
+    {
+      "path": "_playtest_regress\\paper\\ist\\run_config.json",
+      "sha256": "0988fdae923ad7a9f6d30365e7341796a646bce7d4a402b050370f684c933893",
+      "bytes": 2732
+    },
+    {
+      "path": "_playtest_regress_dev\\round78\\dev3_probe.py",
+      "sha256": "4e05d6ba7a9143e644a56de1a208a13236d538981783346e6d61181f4496870b",
+      "bytes": 1262657
+    },
+    {
+      "path": "_playtest_regress_dev\\round78\\run_paper_eval_guarded.py",
+      "sha256": "e83da1740310b589caa2be233e9bace3c6ea39910e754a8a1d903802e5d33011",
+      "bytes": 3006
+    },
+    {
+      "path": "_playtest_regress_dev\\round78\\run_probe_stream.py",
+      "sha256": "d6457ab6b3e7f4d35ca19d891893fdb6aa642aa2f04bee2f41e105394d8f6386",
+      "bytes": 2884
+    },
+    {
+      "path": "_playtest_regress_dev\\tools_backup\\r73_verify.gd",
+      "sha256": "b5965eae8985ad12ac274df264af867b448116b290afcf8ac8bf386e22cf2161",
+      "bytes": 499600
+    }
+  ],
+  "count": 129
+}

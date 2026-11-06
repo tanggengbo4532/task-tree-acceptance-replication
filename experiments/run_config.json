@@ -1,0 +1,107 @@
+{
+  "status": "A_AND_B_COMPLETE_REPRO_READY",
+  "code_head": "f9972eb9670e6eea0ad612bd687d43ccedd43e43",
+  "build": "R311",
+  "fixed_fps": 240,
+  "team_slot": 2,
+  "user_slot": "forbidden: slot1 (read-only, no load/save)",
+  "variants": {
+    "A": "no HUD; random + wall-hit heuristic; no target/route knowledge",
+    "B": "simple navigation; target coordinates known; axial greedy; no BFS/avoidance",
+    "C": "current HUD; multi-source BFS distance field + direction + N"
+  },
+  "repetitions": 3,
+  "random_seeds": [
+    101,
+    202,
+    303
+  ],
+  "max_steps": {
+    "R1": 520,
+    "R2": 320,
+    "R3": 420,
+    "R4": 150,
+    "R5E": 300,
+    "R6": 260
+  },
+  "routes": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5E",
+    "R6"
+  ],
+  "metrics": [
+    "success",
+    "steps",
+    "invalid_moves",
+    "wrong_direction",
+    "recovery_count",
+    "path_deviation_abs",
+    "path_deviation_ratio",
+    "frames",
+    "time_ms"
+  ],
+  "notes": "A full (54 runs) and B automated rule ablation (24 runs) complete; C repro folder added. No production code change (code HEAD f9972eb).",
+  "route_notes": {
+    "R1": "complex 207->206",
+    "R2": "simple 206 A46 VM/dlg",
+    "R3": "simple 153->155",
+    "R4": "simple 255->253",
+    "R5E": "simple 247 before-palace ->255; replaces failed R5",
+    "R6": "detached/detour 139 -> trigger/VM (battle=false recorded; no win required)"
+  },
+  "preflight": {
+    "status": "verified",
+    "file": "preflight_final.csv",
+    "routes": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5E",
+      "R6"
+    ],
+    "R5_original": "invalid and replaced by R5E"
+  },
+  "full": {
+    "runs": 54,
+    "file": "hud_eval_runs.csv",
+    "route_x_variant_x_repetition": "6x3x3",
+    "seeds": [
+      101,
+      202,
+      303
+    ]
+  },
+  "encoding_note": "full_stdout.txt: UTF-16LE (PowerShell >); raw/full_*.txt: UTF-8. Use hud_eval_runs.csv for machine processing.",
+  "counting_note": "R3B 421 and R6A 261 exceed max_steps by 1 because alternate/retry tap is counted; max_steps applies to primary loop attempts, not every auxiliary tap.",
+  "ablation": {
+    "runs": 24,
+    "file": "ablation/experience_ablation.csv",
+    "summary": "experience_ablation.md",
+    "conditions": [
+      "with_rules",
+      "no_rules",
+      "clear_context"
+    ],
+    "nodes": [
+      "R1",
+      "R3",
+      "R4",
+      "R6"
+    ],
+    "seeds": [
+      101,
+      202
+    ],
+    "note": "automated rule ablation, not LLM-subject study"
+  },
+  "repro": {
+    "dir": "repro/",
+    "manifest": "repro/manifest.json",
+    "build_info": "repro/build_info.json",
+    "commercial_assets": "excluded"
+  }
+}

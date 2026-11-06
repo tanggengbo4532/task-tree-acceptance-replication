@@ -1,0 +1,7 @@
+﻿route,variant,seed,start,target,start_scene,end_scene,end_pos,start_N,end_N,success,steps,moved,invalid_moves,wrong_direction,recovery_count,no_key,shortest,path_deviation_abs,path_deviation_ratio,frames,time_ms,elapsed_s,vm_active,battle,dialog,mis_trigger,exit,raw,error
+R1,C,101,"(1024, 1600)","(464, 280)",207,206,"(1488, 1592)",242,78,True,239,239,0,23,0,0,242,-3,0.987603305785124,3100,10031,14.56,False,False,False,False,0,<LOCAL_PATH>,
+R2,C,101,"(1488, 1592)","(864, 1280)",206,206,"(912, 1312)",78,7,True,71,71,0,0,0,0,78,-7,0.91025641025641,916,3129,7.42,True,False,True,False,0,<LOCAL_PATH>,
+R3,C,101,"(1680, 408)","(960, 1056)",153,155,"(832, 1008)",179,186,True,170,170,0,29,0,0,-1,-1,-1.0,2203,870,5.17,True,False,True,False,0,<LOCAL_PATH>,
+R4,C,101,"(1680, 1640)","(1680, 1720)",255,253,"(336, 376)",10,0,True,3,3,0,1,0,0,10,-7,0.3,32,481,4.71,True,True,False,False,0,<LOCAL_PATH>,
+R6,C,101,"(1552, 1432)","(1376, 1360)",139,139,"(1376, 1328)",16,0,True,16,16,0,0,0,0,18,-2,0.888888888888889,201,40,4.25,True,False,False,False,0,<LOCAL_PATH>,
+R5E,C,101,"(896, 1104)","(896, 1152)",247,255,"(1680, 1720)",2,0,True,1,1,0,0,0,0,8,-7,0.125,42,268,4.52,True,False,True,False,0,<LOCAL_PATH>,

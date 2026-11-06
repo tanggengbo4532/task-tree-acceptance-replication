@@ -1,0 +1,239 @@
+{
+  "method": "automated executor rule ablation; NOT an LLM-subject experiment",
+  "nodes": {
+    "R1": {
+      "with_rules": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          239,
+          239
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "no_rules": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          520,
+          520
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "clear_context": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          520,
+          520
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      }
+    },
+    "R3": {
+      "with_rules": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          170,
+          170
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "no_rules": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          420,
+          420
+        ],
+        "invalid": [
+          408,
+          408
+        ],
+        "repeated": [
+          1,
+          1
+        ]
+      },
+      "clear_context": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          420,
+          420
+        ],
+        "invalid": [
+          408,
+          408
+        ],
+        "repeated": [
+          1,
+          1
+        ]
+      }
+    },
+    "R4": {
+      "with_rules": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          3,
+          3
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "no_rules": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          3,
+          3
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "clear_context": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          3,
+          3
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      }
+    },
+    "R6": {
+      "with_rules": {
+        "success": 2,
+        "n": 2,
+        "steps": [
+          16,
+          16
+        ],
+        "invalid": [
+          0,
+          0
+        ],
+        "repeated": [
+          0,
+          0
+        ]
+      },
+      "no_rules": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          260,
+          260
+        ],
+        "invalid": [
+          260,
+          260
+        ],
+        "repeated": [
+          1,
+          1
+        ]
+      },
+      "clear_context": {
+        "success": 0,
+        "n": 2,
+        "steps": [
+          260,
+          260
+        ],
+        "invalid": [
+          260,
+          260
+        ],
+        "repeated": [
+          1,
+          1
+        ]
+      }
+    }
+  },
+  "aggregate": {
+    "with_rules": {
+      "runs": 8,
+      "success": 8,
+      "success_rate": 1.0,
+      "steps_mean": 107.0,
+      "invalid_mean": 0.0,
+      "wrong_mean": 13.25,
+      "repeated_mean": 0.0,
+      "recovery_mean": 0.0
+    },
+    "no_rules": {
+      "runs": 8,
+      "success": 2,
+      "success_rate": 0.25,
+      "steps_mean": 300.75,
+      "invalid_mean": 167.0,
+      "wrong_mean": 64.0,
+      "repeated_mean": 0.5,
+      "recovery_mean": 0.0
+    },
+    "clear_context": {
+      "runs": 8,
+      "success": 2,
+      "success_rate": 0.25,
+      "steps_mean": 300.75,
+      "invalid_mean": 167.0,
+      "wrong_mean": 64.0,
+      "repeated_mean": 0.5,
+      "recovery_mean": 0.0
+    }
+  },
+  "code_head": "f9972eb9670e6eea0ad612bd687d43ccedd43e43",
+  "runs": 24
+}

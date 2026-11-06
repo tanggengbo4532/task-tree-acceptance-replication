@@ -1,0 +1,20 @@
+STDOUT
+[HARNESS-GUARD] slot1 before=8880c3219a03ba0c5c37402304c97cfd1ae296158aeba452a9b08830fbd9fe53
+[HARNESS-GUARD] slot1 forbidden; template initialized with team slot2
+Godot Engine v4.7.2.stable.mono.official.ed1daf0bf - https://godotengine.org
+
+[PALTables] objects=565 enemies=154 teams=380 magics=104 fields=58 stores=21 words=565
+[PALText] init: msgs=13513 words=565 icons=3 palette=256
+[save] LOAD slot=2 current_loaded=2
+[r72] === slot=2 mode=normal
+[r72] S0 loaded scene=139 pos=(0, 0) viewport=(1392, 1320) cash=44148 vars={"a10_stage":1.0,"a11_stage":1.0,"a12_stage":1.0,"a13_stage":1.0,"a18_stage":1.0,"a24_stage":1.0,"a25_stage":1.0,"a26_clue":1.0,"a26_item":1.0,"a26_stage":1.0,"a28_stage":1.0,"a30_cave_passed":1.0,"a30_s69_cave1":0.0,"a30_s69_cave2":0.0,"a30_s69_phase":2.0,"a30_stage":1.0,"a31_stage":1.0,"a32_clue1":1.0,"a32_night_started":1.0,"a32_stage":1.0,"a33_backyard":1.0,"a33_backyard_done":1.0,"a33_down":1.0,"a33_stage":1.0,"a33_stairs":1.0,"a34_case":1.0,"a34_done":1.0,"a34_room":1.0,"a34_stage":4.0,"a35_stage":1.0,"a35_talked":1.0,"a36_route":1.0,"a36_stage":0.0,"a4_drunk_talk_done":true,"a5_s4_lady_talked":true,"a7_arrived":true,"a8_stage":1.0,"a9_stage":1.0,"battle_reuse_actions":{"0":{"id":0.0,"target":0.0,"type":2.0},"1":{"id":0.0,"target":0.0,"type":2.0},"2":{"id":0.0,"target":1.0,"type":2.0}},"battle_team":29.0,"cave_door_70_evt":5078.0,"cave_door_a_evt":5078.0,"cave_door_b_evt":5082.0,"cur_playing_rng":1.0,"exp_scale_v2":true,"exp_scale_v3":true,"last_unequipped_item":248.0,"lidan_hall_talk_done":true,"magic_base_damage":{"394":564.0},"s75_new_exit_evt":5078.0,"scene2_intro_done":true}
+[BUILD] R311-a49-once floor-source=location_name
+[save] LOAD slot=2 current_loaded=2
+[ist] {"battle":false,"dialog":false,"end_N":0,"end_pos":"(1344, 1344)","end_scene":139,"frames":250,"invalid_moves":6,"mis_trigger":false,"moved":16,"no_key":0,"path_deviation_abs":4,"path_deviation_ratio":1.22222222222222,"recovery_count":0,"route":"R6","seed":303,"shortest":18,"start":"(1552, 1432)","start_N":16,"start_scene":139,"steps":22,"success":true,"target":"(1376, 1360)","time_ms":434,"variant":"B","vm_active":true,"wrong_direction":0}
+[r72] DEV3 IST end scene=139 pos=(1344, 1344) hall=false busy=true dlg=true hint=目标 第 5 章：进入蜀山（真实剧情门）｜下一步按【↑】键 · 剩 1 格 · 到点按空格/走近触发 floor= exit_cell=(-1, -1) near=false trig=0
+[r72] === RESULT fails=0 notes=0 moves=0
+[r72] MOVES 
+EXIT 0
+[HARNESS-GUARD] slot1 after=8880c3219a03ba0c5c37402304c97cfd1ae296158aeba452a9b08830fbd9fe53
+
+STDERR

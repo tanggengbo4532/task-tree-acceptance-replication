@@ -1,0 +1,25 @@
+# IST repro commands (paths env-parameterized)
+
+## Manifest (read-only; no game run)
+$env:IST_ROOT = (Get-Location).Path
+python _playtest_regress/paper/ist/repro/build_manifest.py
+
+## A full experiment (requires PAL98 data + Godot; writes only team slot2; slot1 guarded read-only)
+$env:IST_ROOT = (Get-Location).Path
+$env:IST_DIR = "$env:IST_ROOT/_playtest_regress/paper/ist"
+$env:IST_PYTHON = (Get-Command python).Source
+$env:IST_RUNNER = "$env:IST_ROOT/_playtest_regress_dev/round78/run_probe_stream.py"
+$env:PAL98_APPDATA = "$env:APPDATA/Godot/app_userdata/PAL98 Godot (REA port)"
+python _playtest_regress/paper/ist/ist_runner.py
+
+## B experience ablation
+python _playtest_regress/paper/ist/ablation_runner.py
+
+## Derived outputs
+# A: hud_eval_runs.csv / hud_eval_summary.md / route_matrix.md
+# B: _playtest_regress/paper/ist/ablation/experience_ablation.csv / _playtest_regress/paper/ist/experience_ablation.md
+
+## Note
+- The runners refuse slot1 and check slot1 hash before/after.
+- Do not run these commands as part of a paper claim without a legal PAL98 environment.
+- Commercial game data/assets are not included in this repro directory.
