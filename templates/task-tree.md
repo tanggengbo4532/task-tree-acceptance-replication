@@ -50,8 +50,31 @@ python -B tools/verify/task_tree.py status --tree task-tree.json     # 是否整
 | **三重确认** | 通过节点必须有 tester / developer / lead 三者 `verdict: pass` 且记录 `who`、`t_exec` |
 | 证据可核 | 通过节点至少一条证据，且在 `manifest.json` 里 hash 一致（有 `--manifest` 时） |
 
-用 `status` 判断"是否整体通过"；用 `check` 判断"树本身是否合规"。两者都只读，
-修改通过提交 JSON 文件完成，git 历史即审计线。
+用 `status` 判断"是否整体通过"；用 `check` 判断"树本身是否合规"。
+
+**三重确认的写入（v4.2 起，写死）**：每次只写**一个角色**，且**工具只能写测试自判**。
+
+```powershell
+# 1) 测试自判：step_runner 通过后自动写入（--source tool 只能签 tester）
+python -B tools/verify/step_runner.py --backend playtest.json --steps n01.json --tree task-tree.json
+#    或手动：python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 `
+#            --role tester --verdict pass --who tester --evidence evidence/A1_s05.png
+
+# 2) 开发复核：必须是人的动作（工具执行会报错）
+python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role developer --verdict pass --who dev
+
+# 3) Lead 宣布：前置条件为 tester+developer 均已 pass 且节点有证据；这一步才把状态改成 passed
+python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role lead --verdict pass --who lead
+```
+
+任一方 `--verdict reject` → 节点进入 `fixing`，不会前进。已通过的节点拒绝新判定，必须先：
+
+```powershell
+python -B tools/verify/task_tree.py reopen --tree task-tree.json --node A1 --reason user_bug --who lead
+```
+
+> 因此**没有任何一条命令能把节点直接变成 passed**：测试跑通只产生"测试自判"，
+> 开发复核与 Lead 宣布各需一次人工调用，且 Lead 不能越过前两者，也不能在没有证据时宣布。
 
 ## 2. 线路清单（覆盖应用使用的所有可能线路）
 

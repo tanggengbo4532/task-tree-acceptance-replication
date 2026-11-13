@@ -241,8 +241,13 @@ def run(backend, spec, jsonl='', out_dir=''):
             _append(jsonl, rec)
             return fail(RC_FAIL, i, step, reasons, now)
         rec['ok'] = True
-        if step.get('shot'):
-            rec['shot'] = backend.shot('%s_s%02d' % (node, i))
+        if step.get('shot') or i == len(spec['steps']):
+            # last step always keeps a frame: a passed node needs evidence
+            try:
+                rec['shot'] = backend.shot('%s_s%02d' % (node, i))
+                summary.setdefault('evidence', []).append(rec['shot'])
+            except Exception as e:
+                rec['shot_error'] = str(e)
         _append(jsonl, rec)
         done.append({'step': i, 'do': action, 'value': value, 'ts': rec['ts']})
         summary['steps_passed'] = i
@@ -327,12 +332,29 @@ SELFCHECK_STEPS = {'node': 'MOCK-N01', 'steps': [
 ]}
 
 
+def record_tester_verdict(tree_path, node, who, evidence, t_exec=None):
+    """Write ONLY the tester's self-judgement into the task tree.
+
+    Called after the steps passed. Developer review and the lead announcement are deliberately not
+    written here: they are separate human actions (task_tree.py record --role developer|lead), so a
+    test run can never produce a "passed" node by itself.
+    """
+    sys.path.insert(0, HERE)
+    import task_tree
+    tree = task_tree.load_tree(tree_path)
+    _changed, msg = task_tree.record(tree, node, 'tester', 'pass', who, evidence, source='tool', t_exec=t_exec)
+    task_tree.save_tree(tree, tree_path)
+    return msg
+
+
 def main():
     ap = argparse.ArgumentParser(description='run a node\'s steps through a backend and assert every response')
     ap.add_argument('--backend', help='playtest.json (or legacy per-action cmd config)')
     ap.add_argument('--steps', help='steps JSON file')
     ap.add_argument('--jsonl', default='', help='append a per-step trace to this file')
     ap.add_argument('--out', default='', help='directory for failure snapshots (default: the evidence dir)')
+    ap.add_argument('--tree', default='', help='task-tree.json: after a pass, record the TESTER self-judgement here')
+    ap.add_argument('--who', default='tester', help='--tree: who gives the tester verdict (default tester)')
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args()
     if a.selfcheck:
@@ -356,6 +378,14 @@ def main():
         return RC_CONFIG
     rc, summary = run(backend, spec, a.jsonl, a.out)
     print(json.dumps(summary, ensure_ascii=False, indent=2))
+    if a.tree and rc == RC_OK:
+        # only the tester's own verdict is written; developer/lead stay human actions
+        try:
+            evidence = list(summary.get('evidence') or [])
+            print('[step_runner] ' + record_tester_verdict(a.tree, summary['node'], a.who, evidence))
+        except Exception as e:
+            print('[step_runner] could not record the tester verdict in %s: %s' % (a.tree, e), file=sys.stderr)
+            return RC_CONFIG
     print('[step_runner] %s node=%s steps=%d/%d' % ('PASS' if rc == RC_OK else ('FAIL' if rc == RC_FAIL else 'CONFIG ERROR'),
                                                     summary.get('node', '?'), summary.get('steps_passed', 0),
                                                     summary.get('steps_total', 0)))

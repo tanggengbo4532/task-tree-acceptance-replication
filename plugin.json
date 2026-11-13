@@ -1,8 +1,8 @@
 {
   "name": "game-playtest",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "schema": 4,
-  "description": "4-Agent 四要素任务树黑盒验收框架（人/地点/做到什么/时间=节点唯一标识）：Lead 协调、开发白盒、测试黑盒、记录只读；适用于任意 GUI 应用（桌面软件、Web/Electron、游戏）。节点需三重确认（测试自判→开发复核→Lead 宣布）；禁作弊、只走用户可达路径、证据只增；双进度（用户数据只读 / 团队进度可覆盖）与自动化输入门禁。后端与引擎无关：统一动作契约（launch/close/focus/info/keys/hold/diag/click/type/scroll/shot/hint/read_text/state），内置 Windows 桌面参考后端（PostMessage 或 SendInput，键鼠+点击+文本+滚动，截图不覆盖，输入日志）与 Web 后端（Edge/Chrome DevTools 协议，无第三方依赖，元素定位只用于确定点击位置、隐藏/禁用/被遮挡元素拒绝点击）。工具：通用步骤执行器 step_runner（每步声明期望、超时轮询、失败快照）、HUD 走位器 hud_walker（防吞键/防假通过）、锚点检查、探针/证据清单/指标估算；step_runner 与 hud_walker 的结果不替代三重确认。任务树同时提供机器可读 JSON（tools/verify/task_tree.py）：四要素齐全、t_node 唯一、只向前、状态机合法、PASS 为终态（重开需 user_bug/code_change）、通过节点必须有 tester/developer/lead 三方 pass 签名且证据 hash 一致。",
+  "description": "4-Agent 四要素任务树黑盒验收框架（人/地点/做到什么/时间=节点唯一标识）：Lead 协调、开发白盒、测试黑盒、记录只读；适用于任意 GUI 应用（桌面软件、Web/Electron、游戏）。节点需三重确认（测试自判→开发复核→Lead 宣布）；禁作弊、只走用户可达路径、证据只增；双进度（用户数据只读 / 团队进度可覆盖）与自动化输入门禁。后端与引擎无关：统一动作契约（launch/close/focus/info/keys/hold/diag/click/type/scroll/shot/hint/read_text/state），内置 Windows 桌面参考后端（PostMessage 或 SendInput，键鼠+点击+文本+滚动，截图不覆盖，输入日志）与 Web 后端（Edge/Chrome DevTools 协议，无第三方依赖，元素定位只用于确定点击位置、隐藏/禁用/被遮挡元素拒绝点击）。工具：通用步骤执行器 step_runner（每步声明期望、超时轮询、失败快照）、HUD 走位器 hud_walker（防吞键/防假通过）、锚点检查、探针/证据清单/指标估算；step_runner 与 hud_walker 的结果不替代三重确认。任务树同时提供机器可读 JSON（tools/verify/task_tree.py）：四要素齐全、t_node 唯一、只向前、状态机合法、PASS 为终态（重开需 user_bug/code_change）、通过节点必须有 tester/developer/lead 三方 pass 签名且证据 hash 一致；record 每次只写一个角色，工具只能写测试自判，开发复核与 Lead 宣布必须人工，Lead 宣布需证据。",
   "entry": "SKILL.md",
   "skills": [
     "SKILL.md"

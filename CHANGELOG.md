@@ -7,6 +7,32 @@
 
 > 版本号与 `plugin.json` 保持一致。本文件记录对外可见的变化（框架/角色/标准/模板/工具）。
 
+## v4.2.0（2026-11-14）· 三重确认可写入，但不可被自动化替代
+
+> v4.1 让任务树可校验，但树只能靠手改。本版加上写入命令 `record` / `reopen`，
+> 并把"谁有权签哪一项"变成代码里的硬约束。
+
+### 新增
+- `task_tree.py record --node A1 --role tester|developer|lead --verdict pass|reject --who <人> [--evidence ...]`
+  - **每次只写一个角色**；**`--source tool` 只能签 tester**，代签 developer/lead 直接拒绝（退出码 1）；
+  - `reject` 使节点进入 `fixing`，永不前进；
+  - Lead 宣布的前置：tester 与 developer 均已 pass，**且节点已有证据**（无证据拒绝宣布）；
+  - 已通过节点拒绝新判定，必须先 reopen。
+- `task_tree.py reopen --node A1 --reason user_bug|code_change --who <人>`：把 passed 拉回 testing，
+  原因与操作人写入 history。
+- `step_runner.py --tree task-tree.json [--who tester]`：步骤全部通过后**只写测试自判**，
+  并自动保留最后一步的截图作为该节点证据（此前通过节点可能一条证据都没有）。
+- 自检扩充到 24 项，新增用例：只签 tester 时节点停在 testing、Lead 越级被拒、工具代签被拒、
+  有证据才能宣布、reject 不前进、passed 拒绝新判定、reopen 原因校验。
+
+### 变更
+- `templates/task-tree.md` §1.2：补"三重确认如何写入"的完整命令序列与硬约束说明。
+- `SKILL.md` §2：写明记录方式与"没有任何一条命令能单独把节点变成 passed"。
+- `plugin.json` 4.2.0。
+
+> 设计取舍：自动化只负责**测试自判**这一项。开发复核与 Lead 宣布保留为人工动作，
+> 否则工具就替人做完了三重确认里最关键的两步，框架也就失去了意义。
+
 ## v4.1.0（2026-11-14）· 任务树机器可读 + 论文材料固定入口
 
 > "节点通过需三重确认""Lead 不得单方面宣布通过"此前只写在 prompt 里。本版把任务树做成 JSON，
