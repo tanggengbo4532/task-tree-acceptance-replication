@@ -49,9 +49,7 @@ def analyze(frames, interval_ms: int, threshold: float) -> dict:
 def live(args) -> dict:
     cfg = common.load_config(args.config)
     cfg["__config_path"] = str(Path(args.config).resolve())
-    backend = common.find_backend(cfg)
-    hold_cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(backend),
-                "-Action", "hold", "-Value", f"{args.key},{args.ms}", "-Config", str(Path(args.config).resolve())]
+    hold_cmd = common.backend_command(cfg, "hold", f"{args.key},{args.ms}")
     frames = []
     proc = subprocess.Popen(hold_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     t0 = time.time()

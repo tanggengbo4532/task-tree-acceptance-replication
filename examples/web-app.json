@@ -1,0 +1,21 @@
+{
+  "name": "notes-web-app",
+  "backend": "web",
+  "launch": "C:\\Projects\\notes\\dist\\index.html",
+  "web": {
+    "browser": "msedge",
+    "headless": false,
+    "viewport": [1280, 800],
+    "state_text_limit": 4000
+  },
+  "startup_ms": 15000,
+  "keys": { "default_hold_ms": 60, "gap_ms": 150 },
+  "capture": { "crop_hint": [200, 80, 880, 60] },
+  "evidence": { "dir": "C:\\QA\\evidence\\round01\\shots", "manifest": "C:\\QA\\evidence\\round01\\manifest.json", "append_only": true },
+  "notes": {
+    "web.url": "launch may be a URL (https://...) or a local .html/.js file path; web.url overrides it",
+    "profile": "the backend starts a throwaway browser profile: isolated from the user's own profile, no sign-in, no sync, deleted by close",
+    "click": "VALUE=css=<selector> | text=<visible text> | X,Y[,left|right|double]; hidden/disabled/covered elements are refused",
+    "headless": "headless=true runs without a window (CI); screenshots still work"
+  }
+}

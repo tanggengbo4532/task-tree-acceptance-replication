@@ -8,7 +8,7 @@ param(
 #  2) parse plugin.json / examples / templates/playtest.json
 #  3) install -DryRun must succeed and create nothing
 #  4) install to a temp dir (no -Force needed) then verify required files
-#  5) optional: run python tools/tests/selftest.py
+#  5) optional: run the web backend end-to-end test (headless Edge/Chrome) and tools/tests/selftest.py
 # ASCII-only file: Windows PowerShell 5.1 reads .ps1 as ANSI/GBK.
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +44,22 @@ Check "parse json" {
     Write-Output ("      parsed " + $files.Count + " json files")
 }
 
+Check "no ignored source files" {
+    # .gitignore once excluded tools/evidence/manifest.py: a fresh clone then failed to install
+    $req = @("tools\evidence\manifest.py", "scripts\windows\Common.ps1", "tools\backendlib.py", "tools\verify\step_runner.py")
+    foreach ($rel in $req) {
+        $p = Join-Path $root $rel
+        if (-not (Test-Path -LiteralPath $p)) { throw "missing source file: $rel" }
+        # native stderr must not become a terminating error under $ErrorActionPreference = "Stop"
+        $prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        & git -C $root check-ignore -q $rel 2>&1 | Out-Null
+        $ignored = ($LASTEXITCODE -eq 0)
+        $ErrorActionPreference = $prev
+        if ($ignored) { throw "source file is git-ignored (would be missing from a clone): $rel" }
+    }
+    Write-Output "      required sources are tracked"
+}
+
 Check "no packaging pollution" {
     $bad = Get-ChildItem -LiteralPath $root -Recurse -Force -File -ErrorAction SilentlyContinue | Where-Object {
         $_.Directory.Name -eq "__pycache__" -or $_.Extension -eq ".pyc" -or $_.Name -like ".tmp*"
@@ -55,7 +71,7 @@ Check "no packaging pollution" {
 Check "install -DryRun" {
     $before = $null
     $out = & (Join-Path $root "install.ps1") -DryRun 2>&1
-    if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) { throw ("dry-run exit " + $LASTEXITCODE) }
+    if (-not $?) { throw "install -DryRun failed (see output above)" }
     $text = ($out | Out-String)
     if ($text -notmatch "dry-run") { throw "missing dry-run marker" }
     if (Test-Path -LiteralPath (Join-Path $env:USERPROFILE ".dsh\skills\game-playtest-test-must-not-exist")) {
@@ -68,7 +84,6 @@ Check "install to temp dir + verify" {
     $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("game-playtest-selftest-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
     try {
         & (Join-Path $root "install.ps1") -Target $tmp 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne $null -and $LASTEXITCODE -ne 0) { throw ("install exit " + $LASTEXITCODE) }
         $must = @("SKILL.md", "plugin.json", "install.ps1",
                   "scripts\windows\PlaytestKit.ps1", "scripts\windows\Capture.ps1",
                   "scripts\backends\CONTRACT.md",
@@ -88,6 +103,14 @@ Check "install to temp dir + verify" {
 }
 
 if (-not $SkipPython) {
+    Check "web backend end-to-end (headless)" {
+        $py = (Get-Command python -ErrorAction SilentlyContinue)
+        if (-not $py) { throw "python not found in PATH" }
+        & python -B (Join-Path $root "tests\Test-WebBackend.py") 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw ("Test-WebBackend exit " + $LASTEXITCODE + " (run it directly for details; needs Edge or Chrome)") }
+        Write-Output "      tests/Test-WebBackend.py PASS"
+    }
+
     Check "python selftest" {
         $py = (Get-Command python -ErrorAction SilentlyContinue)
         if (-not $py) { throw "python not found in PATH" }

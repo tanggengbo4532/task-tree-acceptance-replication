@@ -2,7 +2,9 @@
 
 > 版本：**v3.2.0**｜状态：**新增验证自动化层**（任务树 + 锚点/walker 断言，不替代人工验收）
 > 目标：把"对错可自动判"的部分交给机器、把"观感/手感"留给人——**单节点自动验证目标 < 2 分钟**（过去长距离重走 20+ 分钟）。
-> 路径说明：插件侧工具为 `tools/verify/{common,hud_walker,anchor_check,run_verify,selftest}.py`（v3.2.0 已落盘）；项目侧参考实现 `_playtest_regress_dev/tools_r78/`（同名 Python 工具；`run_verify.ps1` 为项目侧旧脚本参考）。相关：`references/backends/CONTRACT.md`（若存在；否则见 `scripts/backends/CONTRACT.md` §6）、`references/testing/playbook.md`、`templates/anchor-ledger.md`。
+> 路径说明：插件侧工具为 `tools/verify/{common,step_runner,hud_walker,anchor_check,run_verify,selftest}.py`；后端契约见 `scripts/backends/CONTRACT.md`（v4）。相关：`references/testing/playbook.md`、`templates/anchor-ledger.md`。
+>
+> **v4 起按应用类型选工具**：任何应用优先用 **`step_runner`**（每步声明期望，含点击/文本/滚动）；只有"屏幕上有方向提示、需要沿提示走"的游戏类应用才用 `hud_walker`。两者都只是证据来源，**不替代三重确认**。
 
 ## 0. 一句话与分层
 
@@ -26,17 +28,18 @@
 
 ## 2. Headless HUD 走位器（自动断言）
 
-- **输入（实际 CLI）**：`--backend <backend.json>`（verification backend 配置）、`--path <内置路径名>`（A12/A14_1F/A14_2F/A13_PRE/DOCK）或 `--specs <自定义 JSON>`、`--jsonl <输出轨迹>`、`--max-steps`（默认 ≤1200）、`--selfcheck`（无窗口自检）；退出码 0=通过/1=断言失败/2=backend 不支持或配置错误。
-- **循环**：读取当前 HUD 状态（backend `state` 导出或中央提示解析：`scene/floor/pos/central_text/objective`）→ 从中央提示解析**下一步方向 + 剩余 N** → 注入方向键（`keys`/`hold`，**真实按键**）→ 记录 JSONL 一步。
-- **JSONL 每步字段**：`ts, scene, floor, pos, N, dir, central_text, objective, key, moved`。
+- **输入（实际 CLI）**：`--backend <playtest.json>`（推荐；经 `tools/backendlib.py` 分发到 `backend` 字段指定的后端）、`--specs <walk-specs.json>`（**必填**：每条的步数上限/期望到达提示/是否单调/提示解析正则）、`--path <specs 里的名字>`、`--jsonl <输出轨迹>`、`--max-steps`、`--selfcheck`（无窗口自检）；退出码 0=到达目标/1=断言失败/2=配置或能力错误。
+- **循环**：读取当前状态（backend `state` 导出）→ 从提示文本解析**下一步方向 + 剩余 N** → 注入方向键（**真实按键**）→ 记录 JSONL 一步。
+- **JSONL 每步字段**：`ts, path, steps, n_seq, keys, scene_changed_to, fails, reached, snapshot`。
 - **自动断言（fail 即停 + 失败快照）**：
   | 断言 | 判据 |
   |---|---|
-  | N 严格递减 | 连续 2 步 N 不下降/回升 → fail |
-  | 方向可走 | 同方向按键连续 3 步位移 0 → fail（被挡/指向不可走） |
-  | N 不抖动 | 相邻方向反复（A→B→A）超过阈值（如 3 次）→ fail |
-  | 无意外切场景 | 出现非目标场景切换（尤其门/出口误传）→ fail（**排门**：场景门引起的大帧变化不得当作"走成功"） |
-  | 超时/步数上限 | > 1200 步 → fail |
+  | **必须真正到达** | 只有出现"到达"依据（N=0 或无方向且命中 `expect_prompt`，或切到 `end_scene`）才算通过；跑完仍未到达 = fail |
+  | N 严格递减 | N 上升立即 fail；连续 `stall_limit`（默认 2）次按键后 N 不变 = fail（吞键/被挡） |
+  | 位置在变 | 连续 `still_limit`（默认 3）次按键后 `pos` 不变 = fail |
+  | 无意外切场景 | 切到非 `end_scene` 的场景 = fail（**排门**：场景门引起的大帧变化不得当作"走成功"） |
+  | 提示可解析 | 既无方向、也无预期到达提示 = fail（不会静默跳过） |
+  | 步数上限 | 达到 `max_steps` 仍未到达 = fail |
 - **输出**：`walk-report.md`（节点/路径/每步 N/失败点/证据路径）+ 失败时 `failures/` 快照；按任务树节点验收点直接核对并记录证据。
 - **已知坑（真实案例 F-R76e-1）**：以"画面变化=走成功"自动选方向时，街道↔客栈场景门切换的大变化会被误判为可走 → 角色被带回上一场景并卡角落。**必须排门 + 以状态导出（pos/scene）判位移，不以画面变化判移动**。
 
@@ -77,9 +80,9 @@
 ## 7. 回归套件 `run_verify`（一条命令）
 
 - 把"可自动跑"的回归项打包：P0 新开局链、fadecheck、cheat 扫描、streetkeys、a9exit/room、RNG 残留、走位器覆盖节点路径（A12~A15 等）；
-- **一条命令**：`python -B tools/verify/run_verify.py --backend backend.json --paths A12,A14_1F,A14_2F,A13_PRE,DOCK --jsonl walk-report.jsonl --ledger anchor-ledger.json` → 输出 **PASS/FAIL 清单**（每项：名称/结果/耗时/证据路径/失败快照）；退出码 0=全过；项目侧参考 `_playtest_regress_dev/tools_r78/run_verify.ps1`。
-- 用法：每次提交后跑；全绿才进入人工验收；FAIL 项逐条修/复验（同类第 2 次→设计层修复）；
-- 插件侧：`tools/verify/run_verify.py`（v3.2.0 已落盘，参数见上）；`common.py` 为共享 backend 调用层。
+- **一条命令**：`python -B tools/verify/run_verify.py --backend playtest.json --steps "L1-N01:n01.json,L1-N02:n02.json" --anchor N01-start --ledger anchor-ledger.json [--launch]` → 输出 PASS/FAIL/CONFIG/SKIP 表（每项：名称/结果/耗时/证据路径/失败快照）；退出码 0=全过、1=有失败、2=配置错误。
+- **能力缺失记 SKIP，不记 PASS**：后端没有 `state` 且步骤需要文本/位置期望时，`step_runner` 报配置错误并给出原因（这类节点只能人工验）。
+- 用法：每次提交后跑；全绿才进入人工验收；FAIL 项逐条修/复验（同类第 2 次→设计层修复）。
 
 ## 8. 指标（必须记录，防"自动化后反而更慢"）
 
@@ -96,8 +99,8 @@
 
 ## 9. 引擎无关 backend 需求（verification backend）
 
-自动断言依赖 backend 能**导出状态**与**注入按键**；最小契约（详见后端契约 §6）：
-- `keys`（真实按键注入，必需）、`shot`/`screenshot`（证据，必需）、`state`（导出 `scene/floor/pos/central_text/objective/flags`，verification 必需；无则退化为截图 OCR 并标注局限）、`screenshot`（失败快照用）、`test_fast`（可选，仅测试构建）、`failure_snapshot`（可选，工具侧也可自己拼）；
+自动断言依赖 backend 能**导出状态**与**注入输入**；最小契约（详见后端契约 §2/§7）：
+- `keys`/`click`/`type`/`scroll`（真实输入，必需）、`shot`（证据，必需）、`state`（导出 `location/title/visible_text/focus/...`，verification 必需；无则只能用截图差异判 `changed` 并标注局限）、`read_text`（可选）、`test_fast`（可选，仅测试构建）、`failure_snapshot`（可选，工具侧自己拼）；
 - 任何动作失败必须非 0 退出 + stderr 可读；无能力（如 OCR/state）显式 `UNSUPPORTED`，不得假装成功；
 - **只读**：state 导出只能读，不得写状态/跳阶段；test_fast 只缩放时间。
 
@@ -117,7 +120,7 @@
 
 - `templates/task-tree.md`：节点/验收点（walker 目标/期望来源）；
 - `templates/anchor-ledger.md`：锚点台账；
-- `references/backends/CONTRACT.md`（若存在）/`scripts/backends/CONTRACT.md` §6：verification backend 契约。
+- `scripts/backends/CONTRACT.md` §2/§7：backend 动作契约与 verification 扩展（state / test_fast / failure_snapshot）。
 
 ## 12. 测试与游戏的边界（铁律，v3.2.1）
 

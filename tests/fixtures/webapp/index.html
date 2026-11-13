@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Notes - Sign in</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; background: #f4f6fa; color: #1c2430; }
+  .card { background: #fff; border: 1px solid #cfd6e4; border-radius: 6px; padding: 16px; max-width: 420px; }
+  input { display: block; margin: 6px 0 12px; padding: 6px; width: 240px; }
+  button { padding: 8px 14px; }
+  #error { color: #b00020; min-height: 1.2em; }
+  #covered { position: fixed; left: 20px; bottom: 20px; }
+  #overlay { z-index: 10; position: fixed; left: 0; right: 0; bottom: 0; height: 90px; background: rgba(20, 30, 50, .85); color: #fff; padding: 12px; }
+  .spacer { height: 1400px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<!-- Test fixture for the web backend: a tiny non-game app (sign in -> notes list).
+     It contains NO test hooks: everything the tests assert is visible to a user. -->
+<div id="login" class="card">
+  <h1>Sign in</h1>
+  <label>User <input id="user" name="user" autocomplete="off"></label>
+  <label>Password <input id="pass" name="pass" type="password"></label>
+  <div id="error"></div>
+  <button id="signin">Sign in</button>
+  <button id="sso" disabled>Single sign-on</button>
+</div>
+
+<div id="notes" class="card" hidden>
+  <h1>Notes</h1>
+  <p id="welcome"></p>
+  <input id="note" name="note" placeholder="New note" autocomplete="off">
+  <button id="add">Add note</button>
+  <ul id="list"></ul>
+  <p id="count">0 notes</p>
+  <div class="spacer"></div>
+  <p id="bottom">End of page</p>
+  <button id="covered">Export</button>
+</div>
+
+<div id="overlay" hidden>Cookie banner covering the bottom of the page</div>
+
+<script>
+  var notes = [];
+  function show(route) {
+    document.getElementById('login').hidden = route !== 'login';
+    document.getElementById('notes').hidden = route !== 'notes';
+    document.getElementById('overlay').hidden = route !== 'notes';
+    document.title = route === 'notes' ? 'Notes - List' : 'Notes - Sign in';
+    location.hash = '#/' + route;
+  }
+  document.getElementById('signin').addEventListener('click', function () {
+    var u = document.getElementById('user').value, p = document.getElementById('pass').value;
+    if (!u || p !== 'secret') { document.getElementById('error').textContent = 'Wrong user or password'; return; }
+    document.getElementById('welcome').textContent = 'Welcome, ' + u;
+    show('notes');
+  });
+  function addNote() {
+    var box = document.getElementById('note');
+    if (!box.value.trim()) return;
+    notes.push(box.value.trim());
+    var li = document.createElement('li'); li.textContent = box.value.trim();
+    document.getElementById('list').appendChild(li);
+    document.getElementById('count').textContent = notes.length + (notes.length === 1 ? ' note' : ' notes');
+    box.value = '';
+  }
+  document.getElementById('add').addEventListener('click', addNote);
+  document.getElementById('note').addEventListener('keydown', function (e) { if (e.key === 'Enter') addNote(); });
+  document.getElementById('covered').addEventListener('click', function () {
+    document.getElementById('bottom').textContent = 'Exported';
+  });
+  location.hash = '#/login';
+</script>
+</body>
+</html>

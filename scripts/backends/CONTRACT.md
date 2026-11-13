@@ -1,161 +1,197 @@
-# 后端动作契约（Backend Contract）v1 · verification 扩展 v3.2
+# 后端动作契约（Backend Contract）v4 · 通用应用
 
-> 本文件是 `game-playtest` 插件**引擎无关**的边界：4-Agent 框架（Lead/开发/测试/记录）只依赖本契约，
-> 不依赖任何具体引擎或窗口实现。任何引擎/应用只要实现下列动作，即可被本插件黑盒驱动。
+> 本文件是 `game-playtest` 插件**与引擎/平台无关**的边界：4-Agent 框架（Lead/开发/测试/记录）
+> 与所有工具只依赖本契约，不依赖任何具体引擎或窗口实现。任何应用（桌面软件、Web/Electron、
+> 游戏）只要实现下列动作，即可被本插件黑盒驱动。
 
-## 1. 动作（Actions）
+## 0. 两个已注册后端
 
-所有动作通过后端入口脚本以 `-Action <name> -Value <args>` 调用（Windows 参考实现：
-`scripts/windows/PlaytestKit.ps1`）。**成功返回 0，失败返回非 0**，并在 stdout 输出机器可解析的一行摘要
-（`KEY=value` 或 JSON 行）；stderr 输出错误详情。
-
-| 动作 | 参数（Value 约定） | 语义 | 必需 |
+| 后端 | 入口 | 运行方式 | 覆盖 |
 |---|---|---|---|
-| `launch` | 无（读配置） | 启动目标应用/游戏（单实例），等待窗口出现并记录 pid/hwnd | ✅ |
-| `close` | 无 | 关闭由 `launch` 启动的进程（优先用记录的 pid；禁止杀无关进程） | ✅ |
-| `focus` | 无 | 把目标窗口置前台（必要时先 restore），返回 pid/hwnd | ✅ |
-| `info` | 无 | 输出窗口状态：`pid hwnd title iconic/zoomed rect client fgIsGame` | ✅ |
-| `keys` | `KEY[,KEY...]` 或 `TEXT` | 依次发送轻按（默认 60ms/键，间隔由配置）；方向键/空格/回车/ESC/F1..F12 | ✅ |
-| `hold` | `KEY,MS` | 按住某键 MS 毫秒后释放（长按/蓄力/连续移动） | ✅ |
-| `diag` | `KEY1,KEY2,MS` | 斜向/组合双键（避免单键被门/轨道吃掉） | 可选* |
-| `shot` | `NAME`（可空=时间戳） | 截取**客户区**完整帧，输出**绝对路径**；优先 PrintWindow，空白则回退屏幕拷贝 | ✅ |
-| `hint` | `NAME`（可空） | 截完整帧 + 按配置裁剪的提示条图（用于逐步检查文案/箭头） | 可选* |
-| `diag`（诊断输出） | 无 | 返回窗口/前台/DPI/截帧方式（printwindow/screencopy）等诊断信息 | 可选* |
-| `read_text` | `REGION` 或全帧 | **可选**：读取 UI 文本（引擎钩子/Ocr/内部日志）。未实现时必须明确返回 `UNSUPPORTED` | ❌ 可选 |
+| `windows` | `scripts/windows/PlaytestKit.ps1`（共用 `Common.ps1`，截图 `Capture.ps1`） | PowerShell 5.1+ | Windows 桌面应用/游戏 |
+| `web` | `scripts/backends/web/adapter.py` | Python 3.8+，Edge/Chrome（CDP，零第三方依赖） | 网页/Electron 渲染层 |
 
-\* 为兼容旧版保留；实现方可只实现必需动作，缺失动作用 `UNSUPPORTED` 显式返回并写 stderr。
+选择方式只有一个：`playtest.json` 的 `backend` 字段（或 `backend_path` 直接给适配器路径）。
+所有工具（`tools/backendlib.py`、探针、`step_runner`、`hud_walker`、`anchor_check`）都通过同一分发层
+调用后端，工具不关心具体后端。
 
-## 2. 配置（playtest.json v2）
+## 1. 调用与输出
 
-**必填**：`name`、`launch`、`title_pattern`（或 `process_name`，二者至少一个）；
-**可选**：其余字段；旧 v1 字段（顶层 `hint_region` / `shot_dir`）仍向后兼容。
+```text
+<runner> <adapter> -Action <name> [-Value <args>] -Config <playtest.json>
+```
+
+`runner` 按适配器扩展名决定：`.ps1` → `powershell -NoProfile -ExecutionPolicy Bypass -File`；
+`.py` → `python -B`。**stdout 最后一行必须是且只用一个 JSON 对象**（其余行可为人类可读摘要）：
+
+```json
+{"ok": true,  "action": "shot", "path": "C:\\evidence\\a.png", "method": "printwindow"}
+{"ok": false, "action": "keys", "error": "input gate: target window is not foreground"}
+{"ok": false, "action": "state", "unsupported": true, "error": "state is not implemented"}
+```
+
+| 退出码 | 含义 |
+|---|---|
+| 0 | 成功 |
+| 1 | 失败（`ok:false` 且有 `error`） |
+| 3 | 该动作**未实现**（`unsupported:true`）；工具据此降级或报"能力缺失"，**绝不当作通过** |
+
+stderr 写人类可读的错误详情。
+
+## 2. 动作
+
+### 2.1 必需动作
+
+| 动作 | Value | 语义 |
+|---|---|---|
+| `launch` | （读配置） | 启动目标（单实例）。等窗口/页面就绪后返回 `pid`、`hwnd`/`url`、`title`。**就绪失败必须返回非 0**（并可通过 `close` 清理）。 |
+| `close` | — | 关闭**由 launch 启动的**进程。禁止关闭无关进程；无启动记录时只有在定位唯一时才可关闭。 |
+| `focus` | — | 目标置前台。 |
+| `info` | — | `pid hwnd title iconic/zoomed rect client foreground`（Web：`url title client dpr`）。 |
+| `keys` | `KEY[,KEY...]` | 依次轻按（时长/间隔见 `keys.default_hold_ms`/`gap_ms`）。**发送前先校验全部键名**，未知键则一个都不发。 |
+| `hold` | `KEY,MS` | 按住 MS 毫秒后释放。 |
+| `shot` | `NAME`（可空） | 截客户区/视口整帧，返回**绝对路径**；同名**自动加后缀，绝不覆盖**。 |
+| `click` | `X,Y[,left\|right\|double]` | 按客户区/视口坐标点击。越界或目标点在**别的窗口/元素之下**必须拒绝。 |
+| `type` | `TEXT` | 向当前焦点输入文本（支持任意 Unicode）。 |
+| `scroll` | `X,Y,NOTCHES` | 在坐标处滚动（正数向上）。 |
+
+### 2.2 可选动作
+
+| 动作 | Value | 语义 |
+|---|---|---|
+| `diag` | `KEY1,KEY2,MS` | 双键组合（斜向移动等）。 |
+| `hint` | `NAME` | 整帧 + 按 `capture.crop_hint` 裁剪的局部图（检查提示文案）。**未配置裁剪区域时报错**，不得猜区域。 |
+| `read_text` | 空 / `css=<selector>` | 读取**用户可见**文本（无障碍树/DOM `innerText`）。未实现时返回 `UNSUPPORTED`。 |
+| `state` | — | 只读导出当前状态 JSON（见 §3）。未实现时返回 `UNSUPPORTED`。 |
+| `test_fast` | `on\|off` | **仅测试构建**的时间缩放；不得改变逻辑。 |
+| `failure_snapshot` | `NAME` | 打包"截图 + 最近按键 + 状态 JSON"到失败目录。 |
+
+> Windows 参考后端实现了 2.1 全部与 `diag`/`hint`；`state`/`read_text`/`test_fast`/`failure_snapshot`
+> 显式返回 `UNSUPPORTED`（退出码 3），因为像素后端无法在不侵入应用的前提下导出状态。
+> `failure_snapshot` 的组装在工具侧完成（`tools/verify/step_runner.py`），不依赖后端。
+
+### 2.3 `click` 的元素定位（只用于"点哪里"，不替代点击）
+
+`web` 后端额外接受 `css=<selector>` 或 `text=<可见文本>`，服务端解析出坐标后**仍发送真实鼠标事件**，
+并在解析阶段拒绝：元素不存在、隐藏（尺寸为 0）、`disabled`、文本匹配到多个元素、中心点被其他元素遮挡。
+这属于"输入门禁"：点不到就报错，而不是点偏了算通过。
+
+## 3. `state` 导出 schema
+
+公共字段（能提供的后端尽量提供）：
 
 ```json
 {
-  "name": "app-name",
-  "backend": "windows",
-  "launch": "C:\\path\\to\\app.exe",
-  "args": ["--path", "C:\\game", "res://main.tscn"],
-  "process_name": "app*",
-  "title_pattern": "*Window Title*",
-  "startup_ms": 8000,
+  "location": "app://notes#/list",
+  "title": "Notes - List",
+  "visible_text": "Notes\nWelcome, ann\n...",
+  "focus": {"tag": "input", "id": "note", "value": "milk"},
+  "busy": false,
+  "viewport": [1280, 800],
+  "scroll": [0, 120]
+}
+```
+
+游戏类后端可扩展 `scene`/`floor`/`pos`/`flags`/`central_text`/`objective` 等**引擎自定义字段**；
+工具只认公共字段加自己声明的路径（`step_runner` 的 `expect.state` 支持点路径，如 `focus.value`）。
+
+约束：`state` **只读**，不得写状态、跳阶段、改存档。无法导出必须返回 `UNSUPPORTED` 或非 0，
+**不得返回伪造数据**。
+
+## 4. 配置（playtest.json v3）
+
+公共必填：`backend`（或 `backend_path`）、`launch`，以及定位信息（`title_pattern`/`process_name` 至少一个，
+或 `web.url`）。其余可选。
+
+```json
+{
+  "name": "notes-web-app",
+  "backend": "web",
+  "launch": "https://staging.example.com/login",
+  "process_name": "msedge",
+  "title_pattern": "*Notes*",
+  "args": [],
+  "startup_ms": 15000,
   "focus_before_key": true,
-  "shot_dir": "C:\\evidence\\shots",
-  "capture": {
-    "method": "auto",
-    "dpi_aware": true,
-    "topmost_ms": 400,
-    "crop_hint": [60, 145, 1160, 100]
-  },
+  "input": { "method": "postmessage" },
+  "capture": { "method": "auto", "dpi_aware": true, "topmost_ms": 400, "crop_hint": [200, 80, 880, 60] },
   "keys": { "default_hold_ms": 60, "gap_ms": 550, "allow_postmessage": true },
-  "evidence": { "dir": "C:\\evidence\\shots", "manifest": "C:\\evidence\\manifest.json", "append_only": true },
-  "metrics": { "sessions_dir": "%USERPROFILE%\\.dsh\\storages\\session_projcache\\sessions", "window": null },
+  "web": { "browser": "msedge", "headless": false, "viewport": [1280, 800], "url": "", "state_text_limit": 4000 },
+  "evidence": { "dir": "C:\\QA\\evidence\\round01\\shots", "manifest": "manifest.json", "append_only": true },
+  "metrics": { "sessions_dir": "", "window": null },
   "notes": {}
 }
 ```
 
-字段要求：
-- `launch`：可执行文件绝对路径（或后端约定的启动命令）。
-- `backend`：后端名（默认 `windows`；Web/Unity/Godot 见 §4）；`backend_path` 可选，覆盖入口脚本路径。
-- `title_pattern` / `process_name`：窗口定位（多实例时以 `launch` 返回 pid 为准）。
-- `shot_dir`：证据目录（v1 兼容；推荐改用 `evidence.dir`），后端必须写**绝对路径**到 stdout。
-- `capture.method`：`auto|printwindow|screencopy`；`capture.crop_hint`：提示条裁剪区域 `[x,y,w,h]`（客户区像素；v1 `hint_region` 等价）。
-- `keys.default_hold_ms`/`gap_ms`：轻按时长与间隔（默认 60/550ms）；`allow_postmessage` 默认 true。
-- `evidence.manifest`：append-only 证据清单路径；`append_only` 默认 true。
-- `metrics.sessions_dir`：DSH `session_projcache/sessions` 目录，供 `tools/metrics/dsh_metrics.py` 估算 token/用时。
-- `notes`：自由备注（调试快捷键只允许开发 Agent 使用，不得写入测试用例）。
+- `input.method`：`postmessage`（默认，见 §5）或 `sendinput`（真实全局输入，目标必须前台）。
+  `keys.allow_postmessage=false` 等价于 `sendinput`（v2 兼容）。
+- `web.*` 仅 `web` 后端使用；`capture.*` 仅 `windows` 后端使用。
+- `notes`：自由备注。调试快捷键只允许开发 Agent 使用，不得出现在测试用例/验收证据中。
 
-## 3. 纪律（可交付/可复现的硬约束）
+## 5. 输入方式与门禁
 
-1. **单实例**：同一应用同时只允许一个被测试窗口/进程；启动前如发现残留窗口须先 `close`。
-2. **前台**：截图/按键前 `focus`；截图时临时 topmost，完成后**恢复非 topmost**，避免压住用户其他窗口。
-3. **DPI**：后端启动即声明 DPI aware；截图一律按**客户区物理像素**，坐标不得混用逻辑像素。
-4. **防假帧**：PrintWindow 可能返回空白/纯色帧；必须做空白检测并**回退 CopyFromScreen**，并把使用方式写入输出。
-5. **不伪造**：后端不得直接写游戏内存、伪造事件状态、跳过剧情/战斗、瞬移/改档；一切输入走真实键鼠/引擎公开输入 API。
-6. **不抢资源**：host 上有用户/其他 Agent 测试时，禁止启动第二个实例；headless/自检不得拉起游戏窗口。
-7. **可插拔**：实现方通过 `backend` 字段选择；新增引擎只需实现 §1 必需动作 + 本文件约定，不得改动 4-Agent 框架与模板。
-8. **错误语义**：窗口找不到、权限拒绝、截图失败等必须非 0 退出并给出可操作错误；不得静默成功。
-
-## 4. 常见引擎实现指引
-
-### 4.1 Windows 桌面应用 / 通用（参考实现）
-- 实现：`scripts/windows/PlaytestKit.ps1`（键鼠/窗口）+ `scripts/windows/Capture.ps1`（截图/裁剪/空白回退）。
-- 键：`PostMessage(WM_KEYDOWN/UP)` 优先（不抢焦点）；应用不认时改为前台 `SendInput`。
-- 截图：`PrintWindow(PW_RENDERFULLCONTENT)` → 空白检测 → `CopyFromScreen` 回退。
-
-### 4.2 Web / Electron
-- `launch`：起本地服务或打包 exe；`title_pattern` 匹配浏览器窗口标题或使用 Playwright。
-- `keys/hold`：Playwright `page.keyboard`（真实事件）；`shot`：`page.screenshot()`（客户区）。
-- `info`：`page.title/url/viewport`；`read_text`：可用 `page.locator(...).inner_text()` 明确实现。
-- 纪律：单浏览器上下文、固定 viewport、禁多标签；截图前 `bringToFront()`。
-
-### 4.3 Unity
-- `launch`：exe（`-screen-width/-screen-height -screen-fullscreen 0` 便于固定窗口）；或用 Unity Test Framework 走引擎内输入。
-- `keys/hold`：Windows 消息实现即可（同上）；`read_text` 可用引擎内测试钩子（如 `TestBridge`）暴露为文件/HTTP。
-- 纪律：开发模式 `-logFile` 输出可观测日志；测试窗口固定分辨率；避免 Editor 与 Player 同时跑。
-
-### 4.4 Godot（本项目参考）
-- `launch`：`Godot...exe --path <proj> res://main.tscn`；可用 `--headless` 跑非交互自检（自检不得截图/抢前台）。
-- 可观测性钩子：项目内提供 `--debug-hud`（状态行）、`quit_trace.log`、probe 场景（输入脚本）等，见 `examples/godot-project.md`。
-- 纪律：编辑器/游戏单实例；窗口标题用 `title_pattern` 精确匹配，避免误杀编辑器。
-
-## 5. 后端交付清单（新引擎适配时）
-
-- [ ] `scripts/backends/<engine>/adapter.<ext>` 实现 §1 必需动作（`-Action`/`-Value` 入口）。
-- [ ] 在 `plugin.json` 的 `backends` 注册（name/path/platforms/status）。
-- [ ] `examples/<engine>-*.json` 配置样例（脱敏）。
-- [ ] `tools/tests/selftest.py` 增加该后端 dry-run 校验（无窗口也能跑）。
-- [ ] 在 README/SKILL 中写清后端切换方式（由 Lead/主控写，开发者不改他人写区）。
-
-## 6. verification backend 契约（v3.2 验证自动化扩展）
-
-> v3.2 起，自动验证（锚点库 + HUD 走位器 + 自动断言 + trace diff）依赖 backend 具备"注入按键 + 导出状态 + 证据/失败快照"能力。**引擎无关**；能力缺失必须显式 `UNSUPPORTED`，不得假装成功。
-> 旧 backend 不实现本节时，v3.1 流程仍可跑；walker 自动降级为截图 OCR / 人工并标注局限。
-
-| 能力 | 动作 / 参数 | 语义 | 必需性 |
+| method | 实现 | 适用 | 代价 |
 |---|---|---|---|
-| **keys** | 沿用 §1 `keys`/`hold`/`diag` | 真实按键注入（**自动化走位依赖**；不传送/不改状态） | ✅ 必需 |
-| **shot / screenshot** | `shot NAME`（别名 `screenshot`） | 证据/失败快照截图，stdout 返回绝对路径 | ✅ 必需 |
-| **state** | `state`（Value 空或 `json`） | 只读导出当前状态 JSON（见下 schema）；供 walker 断言/trace | ✅ verification 必需（无则降级 OCR 并标注） |
-| **test_fast** | `test_fast on|off`（或配置 `test_fast: true`） | **仅测试构建**时间缩放（过场/淡入淡出/对白打字/ride 动画）；不改逻辑、不跳剧情/战斗、不改状态；默认 off；HUD 显示测试角标 | 可选 |
-| **failure_snapshot** | `failure_snapshot NAME` | 打包"截图 + 最近 30 帧按键 + 状态 JSON"到失败目录，stdout 返回目录/清单路径 | 可选（walker 可自行拼装） |
+| `postmessage` | `WM_KEYDOWN/UP`、`WM_CHAR`、`WM_LBUTTONDOWN/UP`、`WM_MOUSEWHEEL` | 大多数 Win32/WinForms/WPF/Unity(旧输入)/Electron | 使用 Raw Input 或 DirectInput 的应用可能收不到 |
+| `sendinput` | `SendInput`（全局真实输入） | 任何应用 | 占用真实光标/焦点；后端**必须**在前置校验前台窗口是目标，否则拒绝发送 |
+| `cdp-input` | CDP `Input.dispatchKeyEvent/dispatchMouseEvent/insertText` | 浏览器 | 仅在浏览器内生效 |
 
-### 6.1 `state` 导出 schema（最小集）
+发送前门禁（违反即报错，不得"发送后再说"）：
 
-```json
-{
-  "scene": "scene4",
-  "floor": "1F",
-  "pos": [1088, 1648],
-  "central_text": "客栈：出店门 → 街道 → 十里坡（山神庙）",
-  "objective": "A12",
-  "flags": {"a11_stage": 1, "a9_stage": 3},
-  "party": [{"id": 1, "lv": 3, "hp": 45, "mp": 12}],
-  "busy": false,
-  "test_fast": false,
-  "build": "c77ae7a"
-}
-```
+1. `sendinput`：目标必须是前台窗口，否则拒绝；
+2. `postmessage` 点击：目标点必须位于客户区内，且该点所在窗口属于目标进程；
+3. 键名/坐标/按钮格式非法时**整批拒绝**（不发送半批）；
+4. 每次成功注入都追加一行到 `<evidence>/input-log.jsonl`（时间/动作/值/方式），作为"真实输入"的可审计证据。
 
-- 字段缺失可省略，但 `scene`/`pos` 建议必有（walker 位移判定用）；`central_text`/`objective` 用于 N/方向解析与 diff；
-- **只读**：`state` 只导出、不写状态；`test_fast` 只改时间不改逻辑；
-- 失败（无法导出/无能力）必须非 0 退出 + stderr 说明，或返回 `UNSUPPORTED`（机器可解析行）。
+## 6. 纪律（可交付/可复现的硬约束）
 
-### 6.2 失败快照目录契约（可选）
+1. **单实例**：定位信息缺失时**不得**退化为"任意窗口"；匹配到多个窗口时报错并列出候选。
+   `launch` 记录 pid + 进程启动时间 + 窗口所属 pid，后续动作优先按该记录定位；`close` 只关闭
+   这次启动的进程（pid 复用会被启动时间识别出来）。
+2. **截图**：优先 `PrintWindow`，空白/纯色帧自动回退 `CopyFromScreen`，并把使用方式写入输出。
+3. **DPI**：后端启动即声明 DPI aware；坐标一律客户区物理像素（Web 为视口 CSS 像素）。
+4. **证据只增**：`shot`/`hint` 同名不覆盖，自动加 `_2`、`_3` 后缀。
+5. **不伪造**：不写应用内存、不伪造事件、不跳剧情/不直接改数据库或内部状态；一切输入走真实键鼠或
+   平台公开输入 API；`state` 只读。
+6. **不抢资源**：同一时刻只允许一个被测实例；用户或其他 Agent 在同机测试时不得再启动。
+7. **可插拔**：新增引擎/平台只需实现 §2 必需动作 + 本文件约定，并在 `plugin.json` 的 `backends`
+   注册（`name`/`path`/`runtime`/`platforms`/`actions`/`unsupported`/`status`），**不得改动** 4-Agent
+   框架与模板。
+8. **错误语义**：窗口/页面找不到、权限拒绝、截图失败必须非 0 并给出可操作信息；能力缺失用
+   `UNSUPPORTED`（退出码 3），不得静默成功。
+
+## 7. verification 扩展：state / test_fast / failure_snapshot
+
+自动验证（`step_runner`、`hud_walker`、`anchor_check`）依赖后端能力，缺失时**降级并标注**，不得假装成功：
+
+| 能力 | 用途 | 缺失时 |
+|---|---|---|
+| `state` | 每步期望（文本/位置/场景/焦点）与锚点比对 | `step_runner` 只能用截图差异判断 `changed`；其他期望直接报配置错误（退出码 2）；`hud_walker`/`anchor_check` 退出码 2 |
+| `read_text` | 状态里没有 `visible_text` 时读可见文本 | 文本类期望不可用 |
+| `test_fast` | 仅测试构建的时间缩放 | 不加速 |
+| `failure_snapshot` | 失败备份 | `step_runner` 自己组装（截图 + `keys.jsonl` + `state.json` + `manifest.json`） |
+
+### 7.1 `test_fast` 强制约束（与 `references/standards/no-cheat.md` §6 一致）
+
+**正式包不得包含**测试分支、时间缩放开关或任何测试后门。`test_fast` 只允许存在于独立 debug 构建，
+或由构建外工具实现；使用 `test_fast` 时证据必须标注构建类型，且不得用于"让节点通过"。
+
+### 7.2 失败快照目录
 
 ```text
-<evidence_dir>/failures/fail_<node>_<yyyymmdd-HHMMSS>_<seq>/
-  frame.png            # 失败瞬间完整客户区帧
-  keys.jsonl           # 最近 30 帧按键（ts/key/hold_ms/gap_ms）
-  state.json           # 失败瞬间 state 导出
-  manifest.json        # 节点/断言/失败原因/路径清单
+<evidence_dir>/failures/fail_<node>_<yyyymmdd-HHMMSS>_s<NN>/
+  frame.png          # 失败瞬间完整帧
+  keys.jsonl         # 截至失败的全部输入步骤
+  state.json         # 失败瞬间 state 导出（有则写）
+  manifest.json      # 节点/步骤/期望/失败原因/文件清单
 ```
 
-### 6.3 引擎实现指引（摘）
+### 7.3 引擎实现指引
 
-- **Godot**：`state` 从 world/scene 单例读（只读）；`keys` 用 InputEvent；`test_fast` 用 `Engine.time_scale`（仅在 `--test-fast` 启动参数下启用）；失败快照拼接同上；
-- **Web/Electron**：`state` 通过 debug bridge/只读接口导出；`keys` 用 CDP Input.dispatchKeyEvent；`test_fast` 由应用自身时间源实现；
-- **Unity**：`state` 从只读单例/序列化快照导出；`keys` 用 Input System 注入；`test_fast` 用 `Time.timeScale`（仅测试构建）；
-- **桌面通用**：`state` 无法导出时显式 `UNSUPPORTED`，walker 降级 OCR（标注局限）。
-
-> 说明：task-67 提到 `references/backends/CONTRACT.md`；本插件当前唯一契约路径为 `scripts/backends/CONTRACT.md`（plugin.json references 亦引用此路径），故本节加在此处；若后续迁移到 `references/backends/` 以 dev 回执为准。
+- **Godot**：`state` 从 world/scene 单例只读导出（建议 debug 构建）；`keys` 用 InputEvent 或沿用
+  Windows 消息；`test_fast` 用 `Engine.time_scale`（仅 `--test-fast` 启动的测试构建）；
+- **Unity**：`state` 从只读单例/序列化快照导出；`keys` 用 Input System 注入或 Windows 消息；
+  固定窗口分辨率；避免 Editor 与 Player 同时运行；
+- **Web/Electron**：见 `web` 后端（`state` 由可访问性/DOM 导出，`read_text` = `innerText`）；
+  Electron 若只测渲染层直接用 `web` 后端指向调试端口即可；
+- **桌面通用**：无状态导出能力时显式 `UNSUPPORTED`，工具降级为截图差异并标注局限。

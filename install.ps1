@@ -5,7 +5,7 @@ param(
     [switch]$Backup
 )
 
-# game-playtest installer v3
+# game-playtest installer v4
 # - copies the whole skill (SKILL/README/plugin.json/scripts/tools/templates/examples/references/tests)
 # - validates required files before touching the target
 # - -DryRun prints the plan and changes nothing
@@ -22,8 +22,10 @@ $Target = [System.IO.Path]::GetFullPath($Target)
 $required = @(
     "SKILL.md",
     "plugin.json",
+    "scripts\windows\Common.ps1",
     "scripts\windows\PlaytestKit.ps1",
     "scripts\windows\Capture.ps1",
+    "scripts\backends\web\adapter.py",
     "scripts\backends\CONTRACT.md",
     "tools\probes\walkprobe.py",
     "tools\probes\holdprobe.py",
@@ -77,6 +79,18 @@ if ($DryRun) {
 }
 
 if (Test-Path -LiteralPath $Target) {
+    # -Force deletes the target recursively: refuse anything that is not a previous install of
+    # this plugin, and refuse a target that contains the source (it would delete the source too).
+    $srcFull = [System.IO.Path]::GetFullPath($src).TrimEnd("\")
+    $tgtFull = $Target.TrimEnd("\")
+    if ($tgtFull -eq $srcFull -or $srcFull.StartsWith($tgtFull + "\", [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "refusing to replace target: it is the source directory or contains it ($Target)"
+    }
+    $isPluginDir = (Test-Path -LiteralPath (Join-Path $Target "plugin.json")) -and (Test-Path -LiteralPath (Join-Path $Target "SKILL.md"))
+    $isEmpty = -not (Get-ChildItem -LiteralPath $Target -Force | Select-Object -First 1)
+    if (-not $isPluginDir -and -not $isEmpty) {
+        throw "refusing to replace target: $Target does not look like a game-playtest install (no plugin.json + SKILL.md). Remove it yourself or pick another -Target."
+    }
     if ($Backup) {
         $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
         $bak = $Target + ".bak-" + $stamp
@@ -115,7 +129,7 @@ if ($verify.Count -gt 0) {
     throw ("install verification failed, missing in target:`n  " + ($verify -join "`n  "))
 }
 
-Write-Output ("installed game-playtest v3 -> {0}" -f $Target)
+Write-Output ("installed game-playtest v4 -> {0}" -f $Target)
 Write-Output "self-check:"
 Write-Output ("  python `"{0}`"" -f (Join-Path $Target "tools\tests\selftest.py"))
 Write-Output ("  powershell -NoProfile -File `"{0}`" -DryRun" -f (Join-Path $Target "install.ps1"))

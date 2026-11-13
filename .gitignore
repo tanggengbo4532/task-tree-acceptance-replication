@@ -1,5 +1,5 @@
-# evidence / runtime artifacts
-evidence/
+# evidence / runtime artifacts (project-level only: tools/evidence/ is plugin source)
+/evidence/
 playtest_shots/
 *.log
 .playtest_pid

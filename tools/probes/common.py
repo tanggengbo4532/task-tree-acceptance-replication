@@ -3,8 +3,8 @@
 
 Responsibilities:
   - load playtest config (v2, with v1 fallbacks)
-  - locate backend entry (PlaytestKit.ps1 / adapter) and run one action
-  - parse "SHOT <abs path> ..." output
+  - run one backend action through tools/backendlib.py (any registered backend)
+  - read the screenshot path from the backend's JSON line (legacy "SHOT <abs path> ..." too)
   - frame loading + lightweight diff (Pillow if present, stdlib PNG fallback)
   - JSON/human output helpers
 
@@ -14,15 +14,17 @@ small stdlib PNG decoder handles common 8-bit RGB/RGBA/grayscale PNGs.
 from __future__ import annotations
 
 import json
-import os
+import re
 import struct
-import subprocess
 import sys
 import zlib
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Sequence, Tuple
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[1]
+TOOLS_DIR = Path(__file__).resolve().parents[1]
+PLUGIN_ROOT = TOOLS_DIR.parent
+sys.path.insert(0, str(TOOLS_DIR))
+import backendlib  # noqa: E402
 
 
 # ---------------------------------------------------------------- config
@@ -49,51 +51,44 @@ def evidence_dir(cfg: Dict, default: str = "playtest_shots") -> Path:
 
 
 # ---------------------------------------------------------------- backend
+# All backend access goes through tools/backendlib.py (one dispatch point for every tool).
 def find_backend(cfg: Dict) -> Path:
-    """Prefer config.backend_path, then Windows reference implementation."""
-    cand = cfg.get("backend_path")
-    if cand:
-        p = Path(cand)
-        if not p.is_absolute():
-            p = PLUGIN_ROOT / p
-        if p.exists():
-            return p
-    p = PLUGIN_ROOT / "scripts" / "windows" / "PlaytestKit.ps1"
-    if p.exists():
-        return p
-    raise SystemExit("backend not found: set playtest.json backend_path")
+    """Adapter script for this config (config.backend_path, else config.backend via plugin.json)."""
+    try:
+        return Path(backendlib.resolve_backend(cfg))
+    except backendlib.BackendError as exc:
+        raise SystemExit(str(exc))
+
+
+def backend_command(cfg: Dict, action: str, value: str = "") -> List[str]:
+    """Full command line for one backend action (for callers that need a background process)."""
+    cmd = backendlib.runner_for(str(find_backend(cfg))) + ["-Action", action]
+    if value != "":
+        cmd += ["-Value", value]
+    if cfg.get("__config_path"):
+        cmd += ["-Config", str(cfg["__config_path"])]
+    return cmd
 
 
 def run_backend(cfg: Dict, action: str, value: str = "", timeout: int = 120) -> str:
-    backend = find_backend(cfg)
-    cfg_path = cfg.get("__config_path")
-    cmd = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(backend),
-           "-Action", action, "-Value", value]
-    if cfg_path:
-        cmd += ["-Config", str(cfg_path)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    if proc.returncode != 0:
-        raise RuntimeError(f"backend {action} failed rc={proc.returncode}: {proc.stderr.strip() or proc.stdout.strip()}")
-    return proc.stdout
+    """Run one action and return its stdout; raises RuntimeError on failure/unsupported."""
+    return backendlib.run_action(cfg, action, value, timeout)["raw"]
 
 
 def parse_shot_path(out: str) -> str:
-    for token in out.replace("\r", "\n").split():
-        if token.upper().endswith(".PNG") or token.lower().endswith(".png"):
-            t = token.strip("'\"")
-            if os.path.isabs(t):
-                return t
+    """Screenshot path from backend output: JSON line first, legacy `SHOT <path> method=...` second."""
+    res = backendlib.parse_result(out)
+    if res and res.get("path"):
+        return str(res["path"])
     for line in out.splitlines():
-        if line.startswith("SHOT "):
-            parts = line.split()
-            if len(parts) >= 2:
-                return parts[1]
+        m = re.match(r"^SHOT\s+(.+?\.png)(?:\s+\w+=.*)?$", line.strip(), re.IGNORECASE)
+        if m:
+            return m.group(1).strip("'\"")
     raise RuntimeError(f"cannot parse shot path from output: {out[:300]}")
 
 
 def take_shot(cfg: Dict, name: str) -> str:
-    out = run_backend(cfg, "shot", name)
-    return parse_shot_path(out)
+    return parse_shot_path(run_backend(cfg, "shot", name))
 
 
 # ---------------------------------------------------------------- PNG loading

@@ -13,68 +13,26 @@ param(
 #   - temporary topmost + foreground, restored afterwards (never leave window on top)
 #   - PrintWindow(PW_RENDERFULLCONTENT) first, blank-frame detection -> CopyFromScreen fallback
 #   - -Region "x,y,w,h" crop; 'hint' uses config capture.crop_hint / hint_region
-#   - always prints ABSOLUTE output path(s)
+#   - always prints ABSOLUTE output path(s); last stdout line is one JSON object (CONTRACT section 1)
+#   - append-only evidence: an existing name gets a _2/_3 suffix, never overwritten
 # Usage:
 #   Capture.ps1 -Action shot  -Config playtest.json -Value step01
 #   Capture.ps1 -Action hint  -Config playtest.json -Value step01
 #   Capture.ps1 -Action region -Value step01 -Region "60,145,1160,100"
 
 $ErrorActionPreference = "Stop"
-Add-Type -AssemblyName System.Drawing
-
-if (-not ("GPTCapWin32" -as [type])) {
-Add-Type @"
-using System;
-using System.Text;
-using System.Runtime.InteropServices;
-public class GPTCapWin32 {
-    [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
-    [StructLayout(LayoutKind.Sequential)] public struct POINT { public int X, Y; }
-    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
-    [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr h, out RECT r);
-    [DllImport("user32.dll")] public static extern bool ClientToScreen(IntPtr h, ref POINT p);
-    [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr h);
-    [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr h);
-    [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int cmd);
-    [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
-    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-    [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowTextW(IntPtr h, StringBuilder s, int n);
-    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int cx, int cy, uint flags);
-    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
-    [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
-}
-"@
-}
-try { [GPTCapWin32]::SetProcessDPIAware() | Out-Null } catch { }
-
-function Read-Cfg([string]$path) {
-    $p = $path
-    if (-not [System.IO.Path]::IsPathRooted($p)) { $p = Join-Path (Get-Location) $p }
-    if (-not (Test-Path -LiteralPath $p)) { throw "config not found: $p" }
-    return Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json
-}
-
-function Find-Win($cfg) {
-    $pattern = if ($cfg.title_pattern) { [string]$cfg.title_pattern } else { "*" }
-    $exe = if ($cfg.process_name) { [string]$cfg.process_name } else { "" }
-    $procs = Get-Process | Where-Object {
-        $_.MainWindowHandle -ne 0 -and ($_.MainWindowTitle -like $pattern) -and ($exe -eq "" -or $_.ProcessName -like $exe)
-    }
-    $p = $procs | Select-Object -First 1
-    if ($null -eq $p) { throw "target window not found (title_pattern=$pattern)" }
-    return $p
-}
+. (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "Common.ps1")
 
 function Prepare-Win([IntPtr]$hw, [int]$ms) {
-    if ([GPTCapWin32]::IsIconic($hw)) { [GPTCapWin32]::ShowWindow($hw, 9) | Out-Null; Start-Sleep -Milliseconds 350 }
-    [GPTCapWin32]::SetWindowPos($hw, [IntPtr](-1), 0, 0, 0, 0, 0x0001 -bor 0x0002 -bor 0x0040) | Out-Null
-    [GPTCapWin32]::SetForegroundWindow($hw) | Out-Null
+    if ([GPTWin32]::IsIconic($hw)) { [GPTWin32]::ShowWindow($hw, 9) | Out-Null; Start-Sleep -Milliseconds 350 }
+    [GPTWin32]::SetWindowPos($hw, [IntPtr](-1), 0, 0, 0, 0, 0x0001 -bor 0x0002 -bor 0x0040) | Out-Null
+    [GPTWin32]::SetForegroundWindow($hw) | Out-Null
     Start-Sleep -Milliseconds ([math]::Max(120, $ms))
 }
 
 function Release-Win([IntPtr]$hw) {
     # restore non-topmost; keeps user's other windows usable
-    try { [GPTCapWin32]::SetWindowPos($hw, [IntPtr](-2), 0, 0, 0, 0, 0x0001 -bor 0x0002) | Out-Null } catch { }
+    try { [GPTWin32]::SetWindowPos($hw, [IntPtr](-2), 0, 0, 0, 0, 0x0001 -bor 0x0002) | Out-Null } catch { }
 }
 
 function Measure-Frame($bmp) {
@@ -101,19 +59,19 @@ function Measure-Frame($bmp) {
 }
 
 function Capture-Frame([IntPtr]$hw, [string]$mode) {
-    $cr = New-Object GPTCapWin32+RECT
-    [GPTCapWin32]::GetClientRect($hw, [ref]$cr) | Out-Null
+    $cr = New-Object GPTWin32+RECT
+    [GPTWin32]::GetClientRect($hw, [ref]$cr) | Out-Null
     $w = $cr.Right - $cr.Left; $hh = $cr.Bottom - $cr.Top
     if ($w -le 0 -or $hh -le 0) { throw "bad client size ${w}x${hh}" }
-    $pt0 = New-Object GPTCapWin32+POINT; $pt0.X = 0; $pt0.Y = 0
-    [GPTCapWin32]::ClientToScreen($hw, [ref]$pt0) | Out-Null
+    $pt0 = New-Object GPTWin32+POINT; $pt0.X = 0; $pt0.Y = 0
+    [GPTWin32]::ClientToScreen($hw, [ref]$pt0) | Out-Null
     $bmp = New-Object System.Drawing.Bitmap($w, $hh)
     $methodUsed = "printwindow"
     $ok = $false
     if ($mode -ne "screencopy") {
         $g = [System.Drawing.Graphics]::FromImage($bmp)
         $hdc = $g.GetHdc()
-        $ok = [GPTCapWin32]::PrintWindow($hw, $hdc, 2)
+        $ok = [GPTWin32]::PrintWindow($hw, $hdc, 2)
         $g.ReleaseHdc($hdc); $g.Dispose()
     }
     $m = if ($mode -eq "screencopy") { [pscustomobject]@{ white = 1.0; black = 1.0; colors = 0 } } else { Measure-Frame $bmp }
@@ -129,17 +87,8 @@ function Capture-Frame([IntPtr]$hw, [string]$mode) {
     return [pscustomobject]@{ bmp = $bmp; w = $w; h = $hh; method = $methodUsed; white = $m.white; black = $m.black; colors = $m.colors }
 }
 
-function Get-OutDir($cfg) {
-    $d = $null
-    if ($cfg -and $cfg.evidence -and $cfg.evidence.dir) { $d = [string]$cfg.evidence.dir }
-    elseif ($cfg -and $cfg.shot_dir) { $d = [string]$cfg.shot_dir }
-    if ([string]::IsNullOrWhiteSpace($d)) { $d = "playtest_shots" }
-    New-Item -ItemType Directory -Force -Path $d | Out-Null
-    return (Resolve-Path -LiteralPath $d).Path
-}
-
 function Save-Shot($frame, [string]$dir, [string]$name) {
-    $p = Join-Path $dir ($name + ".png")
+    $p = Get-FreePath $dir $name ".png"   # append-only: never overwrite existing evidence
     $frame.bmp.Save($p, [System.Drawing.Imaging.ImageFormat]::Png)
     $frame.bmp.Dispose()
     return (Resolve-Path -LiteralPath $p).Path
@@ -153,33 +102,35 @@ switch ($Action) {
     "info" {
         $p = Find-Win $cfg
         $hw = $p.MainWindowHandle
-        $cr = New-Object GPTCapWin32+RECT; [GPTCapWin32]::GetClientRect($hw, [ref]$cr) | Out-Null
+        $cr = New-Object GPTWin32+RECT; [GPTWin32]::GetClientRect($hw, [ref]$cr) | Out-Null
         $sb = New-Object System.Text.StringBuilder 512
-        [GPTCapWin32]::GetWindowTextW([GPTCapWin32]::GetForegroundWindow(), $sb, 512) | Out-Null
+        [GPTWin32]::GetWindowTextW([GPTWin32]::GetForegroundWindow(), $sb, 512) | Out-Null
         Write-Output ("pid={0} hwnd={1} title='{2}' iconic={3} zoomed={4} client={5}x{6} fgIsGame={7} fgTitle='{8}' capture_method={9}" -f `
-            $p.Id, $hw, $p.MainWindowTitle, [bool][GPTCapWin32]::IsIconic($hw), [bool][GPTCapWin32]::IsZoomed($hw),
-            ($cr.Right - $cr.Left), ($cr.Bottom - $cr.Top), ([GPTCapWin32]::GetForegroundWindow() -eq $hw), $sb.ToString(), $Method)
+            $p.Id, $hw, $p.MainWindowTitle, [bool][GPTWin32]::IsIconic($hw), [bool][GPTWin32]::IsZoomed($hw),
+            ($cr.Right - $cr.Left), ($cr.Bottom - $cr.Top), ([GPTWin32]::GetForegroundWindow() -eq $hw), $sb.ToString(), $Method)
     }
     "shot" {
         $p = Find-Win $cfg; $hw = $p.MainWindowHandle
         Prepare-Win $hw $TopmostMs
         try { $f = Capture-Frame $hw $Method } finally { Release-Win $hw }
-        $dir = Get-OutDir $cfg
+        $dir = Get-EvidenceDir $cfg
         $name = if ([string]::IsNullOrWhiteSpace($Value)) { "shot_" + (Get-Date -Format "yyyyMMdd_HHmmss_fff") } else { $Value }
         $path = Save-Shot $f $dir $name
         Write-Output ("SHOT {0} method={1} size={2}x{3} white={4} black={5} colors={6}" -f `
             $path, $f.method, $f.w, $f.h, $f.white, $f.black, $f.colors)
+        Write-Result ([ordered]@{ ok = $true; action = "shot"; path = $path; method = $f.method; size = @($f.w, $f.h); white = $f.white; black = $f.black; colors = $f.colors })
     }
     "hint" {
         $p = Find-Win $cfg; $hw = $p.MainWindowHandle
-        Prepare-Win $hw $TopmostMs
-        try { $f = Capture-Frame $hw $Method } finally { Release-Win $hw }
-        $dir = Get-OutDir $cfg
-        $name = if ([string]::IsNullOrWhiteSpace($Value)) { "hint_" + (Get-Date -Format "yyyyMMdd_HHmmss_fff") } else { $Value }
-        $full = Save-Shot $f $dir $name
-        $region = @(60, 145, 1160, 100)
+        $region = $null
         if ($cfg.capture -and $cfg.capture.crop_hint) { $region = @($cfg.capture.crop_hint) }
         elseif ($cfg.hint_region) { $region = @($cfg.hint_region) }
+        if ($null -eq $region -or $region.Count -ne 4) { throw "hint requires config capture.crop_hint = [x, y, w, h] (client-area pixels)" }
+        Prepare-Win $hw $TopmostMs
+        try { $f = Capture-Frame $hw $Method } finally { Release-Win $hw }
+        $dir = Get-EvidenceDir $cfg
+        $name = if ([string]::IsNullOrWhiteSpace($Value)) { "hint_" + (Get-Date -Format "yyyyMMdd_HHmmss_fff") } else { $Value }
+        $full = Save-Shot $f $dir $name
         $cx = [int]$region[0]; $cy = [int]$region[1]; $cw = [int]$region[2]; $ch = [int]$region[3]
         $bmp = [System.Drawing.Image]::FromFile($full)
         try {
@@ -188,10 +139,12 @@ switch ($Action) {
             if ($cy + $ch -gt $bmp.Height) { $ch = [math]::Max(1, $bmp.Height - $cy) }
             $rect = New-Object System.Drawing.Rectangle($cx, $cy, $cw, $ch)
             $crop = $bmp.Clone($rect, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
-            $cropPath = Join-Path $dir ($name + "_hint.png")
+            $cropPath = Get-FreePath $dir ([System.IO.Path]::GetFileNameWithoutExtension($full) + "_hint") ".png"
             $crop.Save($cropPath, [System.Drawing.Imaging.ImageFormat]::Png); $crop.Dispose()
         } finally { $bmp.Dispose() }
-        Write-Output ("HINT full={0} crop={1} region={2},{3},{4},{5}" -f $full, (Resolve-Path -LiteralPath $cropPath).Path, $cx, $cy, $cw, $ch)
+        $cropFull = (Resolve-Path -LiteralPath $cropPath).Path
+        Write-Output ("HINT full={0} crop={1} region={2},{3},{4},{5}" -f $full, $cropFull, $cx, $cy, $cw, $ch)
+        Write-Result ([ordered]@{ ok = $true; action = "hint"; path = $full; crop = $cropFull; region = @($cx, $cy, $cw, $ch) })
     }
     "region" {
         if ($Region -match '^\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*$') {
@@ -205,8 +158,8 @@ switch ($Action) {
         try {
             $rect = New-Object System.Drawing.Rectangle($cx, $cy, $cw, $ch)
             $crop = $bmp.Clone($rect, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
-            $dir = Get-OutDir $cfg
-            $out = Join-Path $dir ("region_" + (Get-Date -Format "yyyyMMdd_HHmmss_fff") + ".png")
+            $dir = Get-EvidenceDir $cfg
+            $out = Get-FreePath $dir ("region_" + (Get-Date -Format "yyyyMMdd_HHmmss_fff")) ".png"
             $crop.Save($out, [System.Drawing.Imaging.ImageFormat]::Png); $crop.Dispose()
         } finally { $bmp.Dispose() }
         Write-Output ("REGION {0} crop={1} rect={2},{3},{4},{5}" -f $src, (Resolve-Path -LiteralPath $out).Path, $cx, $cy, $cw, $ch)

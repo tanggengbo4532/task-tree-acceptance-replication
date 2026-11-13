@@ -1,26 +1,46 @@
 {
-  "name": "my-game",
+  "name": "my-app",
   "backend": "windows",
-  "launch": "C:\\Path\\To\\Game.exe",
-  "args": ["--windowed"],
-  "process_name": "Game",
-  "title_pattern": "*MyGame*",
+  "launch": "C:\\Path\\To\\App.exe",
+  "args": [
+    "--windowed"
+  ],
+  "process_name": "App",
+  "title_pattern": "*MyApp*",
   "startup_ms": 8000,
   "focus_before_key": true,
-  "shot_dir": "C:\\QA\\shots\\round1",
+  "input": {
+    "method": "postmessage"
+  },
+  "shot_dir": "C:\\QA\\shots\round1",
   "capture": {
     "method": "auto",
     "dpi_aware": true,
     "topmost_ms": 400,
-    "crop_hint": [0, 0, 1280, 800]
+    "crop_hint": [
+      0,
+      0,
+      1280,
+      800
+    ]
   },
   "keys": {
     "default_hold_ms": 60,
     "gap_ms": 550,
     "allow_postmessage": true
   },
+  "web": {
+    "browser": "msedge",
+    "headless": false,
+    "viewport": [
+      1280,
+      800
+    ],
+    "url": "",
+    "state_text_limit": 4000
+  },
   "evidence": {
-    "dir": "C:\\QA\\evidence\\round1",
+    "dir": "C:\\QA\\evidence\round1",
     "manifest": "manifest.json",
     "append_only": true
   },
@@ -29,9 +49,12 @@
     "window": null
   },
   "notes": {
-    "single_instance_rule": "同一时刻只允许一个被测窗口；测前关残留窗口并记录 pid",
-    "screenshot_method": "auto=PrintWindow 优先，空白回退屏幕拷贝（Vulkan/D3D 下 PrintWindow 可能全黑）",
+    "backend": "windows | web | backend_path=<adapter>; 注册见 plugin.json backends",
+    "locator": "title_pattern / process_name 至少填一个：缺省时后端拒绝工作，绝不匹配任意窗口",
+    "single_instance_rule": "同一时刻只允许一个被测实例；测前关残留实例并保留 pid",
+    "input_method": "postmessage=窗口消息（不抢光标，Raw Input 应用可能收不到）；sendinput=真实全局输入（目标必须前台）",
+    "screenshot_method": "auto=PrintWindow 优先，空白回退屏幕拷贝；同名截图自动加后缀不覆盖",
     "debug_keys": "调试快捷键只许开发自查，不得写进测试用例/验收证据",
-    "schema": "v2；旧 v1 字段（如 hint_region）向后兼容"
+    "schema": "v3；旧 v1 字段（hint_region/shot_dir）与 v2 字段（keys.allow_postmessage）仍兼容"
   }
 }

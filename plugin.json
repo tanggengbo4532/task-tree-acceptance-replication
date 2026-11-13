@@ -1,8 +1,8 @@
 {
   "name": "game-playtest",
-  "version": "3.4.0",
-  "schema": 3,
-  "description": "4-Agent 四要素剧情树黑盒验收框架（人/地点/做到什么/时间=节点唯一标识）（引擎无关可插拔后端）：开发agent白盒设计覆盖所有使用线路的节点任务并修复；测试agent黑盒逐节点验收、维护经验库、困难即停；记录agent按固定六项归档；Lead 分发/验收/汇报。含「进度优先测试」（发现 bug 先存团队进度槽、下次从该进度续测，不从头重走）、「单次判定即通过」（节点 PASS 后不复测，仅用户新报该节点 bug 或该节点代码被修改才重开）、「单进度槽 + 留用户槽」（团队续测固定一个进度槽连续推进，至少留用户槽、用户槽只读不写）。含「双进度人机协同」（进度一=用户专用、团队只读绝不写；进度二=团队专用、可覆盖更新；用户已 PASS 的节点团队直接记 PASS 不复测；团队进度交用户复测，用户确认后双进度对齐到通过点；下一轮从用户进度一继续）。含「槽安全 + 自动化输入门禁」（用户槽不可变、任何情况不写用户槽、自动化只写团队槽；注入按键前必须截图/状态分类确认 UI=游戏世界，菜单/存档/对话框/战斗/过场禁止盲按；战斗恢复只轮询截图判定结束、禁止 SPACE×N 猜恢复；保存/读档必须显式槽位+归属校验、禁止默认槽位；误覆盖=P0 立即停手上报）。含 Windows 参考后端、截图/证据/探针工具、DSH 会话指标估算与安装脚本。",
+  "version": "4.0.0",
+  "schema": 4,
+  "description": "4-Agent 四要素任务树黑盒验收框架（人/地点/做到什么/时间=节点唯一标识）：Lead 协调、开发白盒、测试黑盒、记录只读；适用于任意 GUI 应用（桌面软件、Web/Electron、游戏）。节点需三重确认（测试自判→开发复核→Lead 宣布）；禁作弊、只走用户可达路径、证据只增；双进度（用户数据只读 / 团队进度可覆盖）与自动化输入门禁。后端与引擎无关：统一动作契约（launch/close/focus/info/keys/hold/diag/click/type/scroll/shot/hint/read_text/state），内置 Windows 桌面参考后端（PostMessage 或 SendInput，键鼠+点击+文本+滚动，截图不覆盖，输入日志）与 Web 后端（Edge/Chrome DevTools 协议，无第三方依赖，元素定位只用于确定点击位置、隐藏/禁用/被遮挡元素拒绝点击）。工具：通用步骤执行器 step_runner（每步声明期望、超时轮询、失败快照）、HUD 走位器 hud_walker（防吞键/防假通过）、锚点检查、探针/证据清单/指标估算；step_runner 与 hud_walker 的结果不替代三重确认。",
   "entry": "SKILL.md",
   "skills": [
     "SKILL.md"
@@ -15,26 +15,50 @@
     "desktop"
   ],
   "platforms": [
-    "windows"
+    "windows",
+    "macos",
+    "linux"
   ],
   "scripts": [
+    "scripts/windows/Common.ps1",
     "scripts/windows/PlaytestKit.ps1",
     "scripts/windows/Capture.ps1",
-    "scripts/PlaytestKit.ps1"
+    "scripts/PlaytestKit.ps1",
+    "scripts/backends/web/adapter.py"
   ],
   "backends": [
     {
       "name": "windows",
       "path": "scripts/windows/PlaytestKit.ps1",
       "capture": "scripts/windows/Capture.ps1",
+      "runtime": "powershell",
       "platforms": [
         "windows"
       ],
+      "actions": ["launch", "close", "focus", "info", "keys", "hold", "diag", "click", "type", "scroll", "shot", "hint"],
+      "unsupported": ["state", "read_text", "test_fast", "failure_snapshot"],
+      "status": "reference",
+      "contract": "scripts/backends/CONTRACT.md"
+    },
+    {
+      "name": "web",
+      "path": "scripts/backends/web/adapter.py",
+      "runtime": "python",
+      "platforms": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "actions": ["launch", "close", "focus", "info", "keys", "hold", "diag", "click", "type", "scroll", "shot", "hint", "read_text", "state"],
+      "unsupported": ["test_fast", "failure_snapshot"],
       "status": "reference",
       "contract": "scripts/backends/CONTRACT.md"
     }
   ],
   "tools": {
+    "dispatch": [
+      "tools/backendlib.py"
+    ],
     "probes": [
       "tools/probes/walkprobe.py",
       "tools/probes/holdprobe.py",
@@ -57,6 +81,7 @@
     "verify": [
       "tools/verify/common.py",
       "tools/verify/hud_walker.py",
+      "tools/verify/step_runner.py",
       "tools/verify/anchor_check.py",
       "tools/verify/run_verify.py",
       "tools/verify/selftest.py"
@@ -81,6 +106,8 @@
     "references/testing/probes-and-metrics.md",
     "references/testing/case-studies.md",
     "references/testing/efficiency.md",
+    "references/testing/progress-first.md",
+    "references/testing/human-ai-dual-progress.md",
     "templates/anchor-ledger.md"
   ],
   "templates": [
@@ -102,8 +129,10 @@
     "templates/evidence-index.md"
   ],
   "examples": [
+    "examples/web-app.json",
     "examples/pal98-godot.json",
     "examples/generic-desktop.json",
+    "examples/pal98-walk-specs.json",
     "examples/godot-project.md"
   ],
   "install": {
@@ -118,49 +147,66 @@
   },
   "conventions": {
     "playtest_schema": "templates/playtest.json",
-    "playtest_schema_version": 2,
+    "playtest_schema_version": 3,
+    "backend_dispatch": "tools/backendlib.py",
+    "backend_output": "one JSON object per action as the LAST stdout line; exit 0 ok / 1 error / 3 unsupported",
+    "input_methods": {
+      "postmessage": "send window messages; no cursor hijack; apps using raw input may ignore them",
+      "sendinput": "real global input; target must be foreground (input gate)",
+      "cdp-input": "browser trusted events (web backend)"
+    },
     "evidence_layout": {
       "dir": "evidence/",
       "shots": "evidence/shots/",
       "manifest": "evidence/manifest.json",
-      "reports": "evidence/reports/"
+      "reports": "evidence/reports/",
+      "failures": "evidence/failures/",
+      "input_log": "evidence/input-log.jsonl"
     },
     "single_instance": true,
     "backend_contract": "scripts/backends/CONTRACT.md",
-    "task_tree_doc": "_playtest_regress/task-tree-v8.md"
+    "task_tree_doc": "_playtest_regress/task-tree.md"
   },
   "requires": {
     "python": ">=3.8",
-    "powershell": ">=5.1",
+    "powershell": ">=5.1 (windows backend only)",
+    "browser": "Edge or Chrome (web backend only)",
     "os": "windows"
   },
   "selfcheck": [
-    "python tools/tests/selftest.py",
+    "python -B tools/tests/selftest.py",
+    "python -B tools/verify/selftest.py",
+    "python -B tools/verify/step_runner.py --selfcheck",
+    "python -B tools/verify/hud_walker.py --selfcheck",
+    "python -B tools/verify/anchor_check.py --selfcheck",
+    "python -B tests/Test-WebBackend.py",
     "powershell -NoProfile -File install.ps1 -DryRun",
-    "powershell -NoProfile -File tests/Test-Plugin.ps1",
-    "python tools/verify/selftest.py"
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tests/Test-Plugin.ps1",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tests/Test-Backend.ps1"
   ],
   "keywords": [
     "qa",
     "acceptance",
     "blackbox",
     "playtest",
+    "ui-testing",
+    "app-testing",
+    "web-testing",
+    "cdp",
     "automation",
     "agent",
     "task-tree",
+    "step-runner",
     "experience",
     "evidence",
     "engine-agnostic",
     "backend",
     "progress-first",
     "single-verdict",
-    "single-progress-slot",
     "dual-progress",
     "user-slot",
     "team-slot",
-    "user-acceptance",
     "slot-safety",
-    "user-slot-immutable",
     "input-gate"
   ],
   "license": "MIT"

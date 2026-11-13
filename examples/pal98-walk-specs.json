@@ -1,0 +1,22 @@
+{
+  "A14_1F": {
+    "max_steps": 220,
+    "monotonic": true,
+    "expect_prompt": ["按空格出客栈"],
+    "stall_limit": 2,
+    "still_limit": 3,
+    "hud": { "n_regex": "剩\\s*(\\d+)\\s*格", "dir_regex": "【([↑↓←→])】" }
+  },
+  "DOCK": {
+    "max_steps": 240,
+    "monotonic": true,
+    "expect_prompt": ["按空格前往"],
+    "end_scene": "street"
+  },
+  "lobby": {
+    "max_steps": 40,
+    "monotonic": false,
+    "expect_prompt": ["Reached the lobby"],
+    "hud": { "n_regex": "(\\d+) left", "dir_regex": "\\[(\\w+)\\]", "dir_map": { "up": "UP", "down": "DOWN", "left": "LEFT", "right": "RIGHT" } }
+  }
+}

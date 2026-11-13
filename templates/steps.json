@@ -1,0 +1,13 @@
+{
+  "node": "L1-N01",
+  "name": "sign in with a valid account",
+  "steps": [
+    { "do": "click", "value": "css=#user" },
+    { "do": "type", "value": "ann", "expect": { "state": { "focus.value": "ann" } } },
+    { "do": "click", "value": "css=#pass" },
+    { "do": "type", "value": "secret" },
+    { "do": "click", "value": "css=#signin",
+      "expect": { "text_contains": ["Welcome, ann"], "location_contains": "#/list", "changed": true },
+      "timeout_ms": 3000, "shot": true }
+  ]
+}

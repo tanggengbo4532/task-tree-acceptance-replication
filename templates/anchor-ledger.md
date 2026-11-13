@@ -5,7 +5,7 @@
 > - **进度一** = **用户专用**（用户测试+保存；**团队只读、不写**）；
 > - **进度二** = **团队专用**（团队测试/续测保存；**可覆盖**；当前续测点）。
 > **纪律（写死）**：团队**不写进度一**；进度二**只由团队写**；固定锚点只读不覆盖；用户槽保护（见 `references/testing/human-ai-dual-progress.md`）。
-> 关联：`references/testing/progress-first.md`、`references/testing/human-ai-dual-progress.md`、`references/standards/slot-safety.md`、`tools/verify/anchor_check.py`（`--backend <backend.json> --ledger anchor-ledger.json`，`--record`/`--selfcheck`）。
+> 关联：`references/testing/progress-first.md`、`references/testing/human-ai-dual-progress.md`、`references/standards/slot-safety.md`、`tools/verify/anchor_check.py`（`--backend <playtest.json> --ledger anchor-ledger.json --id <锚点id>`；登记用 `--record --id <id>`，**追加、不可改**；`--pos-tol <像素>` 允许位置容差；`--selfcheck`）。
 > **槽安全铁律（v3.3.3）**：**用户槽不可变**（任何情况不写用户槽；自动化只写团队槽）；**注入按键前必须截图/状态分类确认 UI=游戏世界**（菜单/存档/对话框/战斗/过场禁止盲按）；**保存/读档必须显式槽位+归属校验**（禁止默认槽位）；**误覆盖=P0 立即停手上报**。详见 `references/standards/slot-safety.md`。
 
 ## 0. 原则

@@ -7,6 +7,52 @@
 
 > 版本号与 `plugin.json` 保持一致。本文件记录对外可见的变化（框架/角色/标准/模板/工具）。
 
+## v4.0.0（2026-11-14）· 通用应用化：多后端 + 通用步骤执行器 + 工具不再假通过
+
+> 目标从"游戏验收框架"改为**通用应用测试框架**（桌面软件 / Web / 游戏）。核心方法论
+> （四要素任务树、三重确认、双进度、禁作弊）不变；变化在**输入能力、观测能力、后端抽象与工具的判定可靠性**。
+
+### 后端（新）
+- `scripts/backends/CONTRACT.md` **重写为 v4**：新增 `click`/`type`/`scroll`/`read_text`；明确统一输出
+  （stdout 最后一行一个 JSON，退出码 0/1/3）、输入方式（postmessage/sendinput/cdp-input）、输入门禁、
+  `state` 公共字段 schema、`test_fast` 与禁作弊铁律的一致性。
+- `scripts/windows/Common.ps1`（**新**）：两个脚本共用的窗口定位/焦点/键鼠/结果输出/输入日志。
+- `scripts/windows/PlaytestKit.ps1` **重写**：修复单字符键映射（`a` 曾被发成小键盘 1）、
+  缺定位信息时曾匹配"任意窗口"（现在拒绝）、`close` 曾可能杀无关进程（现在按 pid+启动时间，只关本次启动的）、
+  `launch` 找不到窗口仍返回成功（现在非 0）、新增 `click`/`type`/`scroll`、`keys` 先全量校验后发送、
+  `info` 补 `zoomed`/`fgIsGame`、未实现动作返回 `UNSUPPORTED`（退出码 3）、每次注入写 `input-log.jsonl`。
+- `scripts/windows/Capture.ps1`：改用共用模块；截图/提示条**同名不覆盖**；提示条裁剪区域未配置时报错（不再猜默认区域）。
+- `scripts/backends/web/adapter.py`（**新**）：Edge/Chrome CDP 后端，仅用标准库；`click css=/text=` 只用于定位、
+  真实鼠标事件、隐藏/禁用/被遮挡元素拒绝点击；`state`/`read_text`；临时独立浏览器配置（不登录/不同步，close 删除）、
+  只驱动自己打开的页面（浏览器内部页永不作为目标）。
+- `plugin.json`：新增 `backends` 注册（windows/web）与 `tools.dispatch`，版本 4.0.0 / schema 4。
+
+### 工具（可靠性）
+- `tools/backendlib.py`（**新**）：唯一的后端分发点（按 `playtest.json` 的 `backend` 字段），统一结果解析与退出码语义。
+- `tools/verify/step_runner.py`（**新**）：**通用步骤执行器**——每步"真实输入→期望响应"，超时轮询、
+  失败快照（截图/keys.jsonl/state.json/manifest.json）、JSONL 轨迹；后端无 `state` 时只能判 `changed`，
+  其他期望直接报配置错误而不是通过。这是应用验收的首选工具（游戏走位继续用 `hud_walker`）。
+- `tools/verify/hud_walker.py` **重写**：修复**吞键也返回通过**、意外换场景也返回通过、backend 不支持时退出码错误；
+  规格改为外部 specs 文件（不再内置案例路径），提示解析格式可配置；新增 N 停滞即停、位置不动即停。
+- `tools/verify/anchor_check.py` **重写**：追加式锚点（不覆盖历史）、按 `--id` 比对（多个锚点时不再必然失败）、
+  位置容差、只读。
+- `tools/verify/run_verify.py` **重写**：跑步骤文件/走位/锚点，能力缺失报 skip 而非 PASS。
+- `tools/verify/common.py` **重写**：同时支持 `playtest.json`（走分发层）与旧版"每动作一条 cmd"配置。
+- `tools/probes/*`：全部改走分发层（换后端无需改工具）；修复实时模式因路径少算一层而无法运行、以及含空格截图路径解析错误。
+- `tests/`：新增 `Test-Backend.ps1`（fixture 窗口真机验证 14 项，支持 postmessage/sendinput）、
+  `Test-WebBackend.py`（headless 端到端 12 项）、`tools/verify/selftest.py` 增加"必须失败"的反例。
+
+### 文档/配置
+- `SKILL.md`：改为**通用应用测试框架**标题与表述；新增数据隔离铁律（游戏槽安全为其特例）、禁作弊术语映射、
+  步骤文件用法、多后端说明。
+- `README.md`：按通用应用重写；补自检命令与 `-Force` 的安全说明。
+- `templates/playtest.json`（v3 schema）：新增 `backend`/`input.method`/`web.*`/定位信息必填说明。
+- `templates/steps.json`（**新**）：节点步骤文件模板。
+- `examples/web-app.json`、`examples/pal98-walk-specs.json`（**新**）。
+- `install.ps1`：新增文件入清单；`-Force` 删除前拒绝"非本插件目录"与"包含源目录"的目标；
+  自检命令改用 `python -B`（避免生成 `__pycache__` 让打包自检失败）。
+- `.gitignore`：`evidence/` 改为 `/evidence/`——此前会忽略 `tools/evidence/manifest.py`，**导致 clone 后安装失败**。
+
 ## v3.4.0（2026-11-05）· 任务树四要素（人 / 地点 / 做到什么 / 时间）
 
 > 用户拍板：任务树升级为**四要素**，新增 **时间** 作为**任务节点的唯一标识**（不只记录字段）。
