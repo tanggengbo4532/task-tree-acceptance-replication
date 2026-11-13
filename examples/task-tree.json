@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "project": "notes-web-app",
+  "version": "v1.0",
+  "updated": "2026-11-14T00:00:00+08:00",
+  "lines": [
+    { "id": "A", "type": "main", "name": "sign in and manage notes", "scope": "normal user path" },
+    { "id": "B", "type": "error", "name": "invalid credentials" },
+    { "id": "R", "type": "regression", "name": "regression checks" }
+  ],
+  "nodes": [
+    {
+      "t_node": "N0",
+      "line": "A",
+      "who": "user",
+      "where": { "screen": "start", "entry": "open the app" },
+      "action": "app opens on the sign-in page",
+      "requires": [],
+      "state": "passed",
+      "history": [
+        { "from": "not_started", "to": "testing", "t_exec": "2026-11-14T09:00:00+08:00" },
+        { "from": "testing", "to": "passed", "t_exec": "2026-11-14T09:02:10+08:00" }
+      ],
+      "confirmations": {
+        "tester": { "who": "tester", "verdict": "pass", "t_exec": "2026-11-14T09:02:10+08:00" },
+        "developer": { "who": "developer", "verdict": "pass", "t_exec": "2026-11-14T09:04:00+08:00" },
+        "lead": { "who": "lead", "verdict": "pass", "t_exec": "2026-11-14T09:05:00+08:00" }
+      },
+      "evidence": ["evidence/N0-open.png"],
+      "steps": null,
+      "notes": "evidence must also be listed in the evidence manifest for hash checks"
+    },
+    {
+      "t_node": "A1",
+      "line": "A",
+      "who": "user",
+      "where": { "screen": "sign in", "entry": "user field" },
+      "action": "enter account and password, submit, land on the notes list",
+      "requires": ["N0"],
+      "state": "testing",
+      "history": [
+        { "from": "not_started", "to": "testing", "t_exec": "2026-11-14T09:10:00+08:00" }
+      ],
+      "steps": "examples/steps/notes-A1.json",
+      "anchor": "A1-start"
+    },
+    {
+      "t_node": "A2",
+      "line": "A",
+      "who": "user",
+      "where": { "screen": "notes list", "entry": "note field" },
+      "action": "add a note with Enter and see the count increase",
+      "requires": ["A1"],
+      "state": "not_started"
+    },
+    {
+      "t_node": "B1",
+      "line": "B",
+      "who": "user",
+      "where": { "screen": "sign in", "entry": "user field" },
+      "action": "wrong password shows an error and stays on the form",
+      "requires": ["N0"],
+      "state": "not_started"
+    },
+    {
+      "t_node": "R1",
+      "line": "R",
+      "who": "user",
+      "where": { "screen": "notes list", "entry": "cookie banner" },
+      "action": "a covered button cannot be clicked (regression guard for the input gate)",
+      "requires": ["A1"],
+      "state": "not_started"
+    }
+  ]
+}

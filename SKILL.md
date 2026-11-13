@@ -3,7 +3,7 @@ name: game-playtest
 description: 通用应用黑盒验收框架（桌面软件/Web/游戏；引擎无关 + backend 可插拔）：固定 4 Agent（Lead 只协调 / 开发白盒 / 测试黑盒 / 记录只读），按「线路→任务树→节点」逐节点验收，节点用四要素描述（人/地点/做到什么/时间=节点唯一标识），节点完成需三重确认（测试自判→开发复核→Lead 宣布）；禁作弊红线（只走用户可达路径、不直接改状态/数据）；用户数据与测试数据隔离；经验库复用、困难即停、锚点纪律、只增证据；附可观测性设计原则、通用步骤执行器、量化探针、证据/归档/人读验收模板。
 ---
 
-# 通用应用测试框架 v4.0（4 Agent · 四要素任务树验收 · 应用无关 · backend 可插拔）
+# 通用应用测试框架 v4.1（4 Agent · 四要素任务树验收 · 应用无关 · backend 可插拔）
 
 > **一句话**：把"像真实用户一样把应用用通"拆成**任务树节点**，由固定 4 个 Agent 分工闭环：
 > Lead 协调、开发白盒修、测试黑盒验、记录只读归档；**节点全部通过才算整体通过**，
@@ -57,6 +57,11 @@ description: 通用应用黑盒验收框架（桌面软件/Web/游戏；引擎�
     - 禁止只拿 wall clock 当主键；同一节点复测标记 `t_node#retryN`（ID 不变，不新建节点）。
 - **节点顺序 = 前进方向（写死）**：每节点起点=上一节点终点，只向前推进；**不做回头路验收**；防回归项单独标注、只做一次。
 - 节点附加字段：编号、线路、前置、**起始锚点**、**时间标识（t_node/t_exec）**、状态、证据前缀。
+- **机器可读（v4.0 起，写死）**：任务树同时维护一份 JSON（模板 `templates/task-tree.json`），由
+  `tools/verify/task_tree.py check` 强制校验：四要素齐全、`t_node` 唯一、`requires` 只指向更早节点、
+  状态机合法、**PASS 是终态**（重开必须写 `reopen_reason: user_bug|code_change`）、**通过节点必须有
+  tester/developer/lead 三方 `verdict: pass`** 且证据在 manifest 里 hash 一致。"Lead 不得单方面宣布通过"
+  由此成为硬约束，而不是自觉。`status` 子命令判断是否整体通过。
 - 状态机：`未开始 → 测试中 → 阻塞 → 修复中 → 已通过（存档）`；**全部线路所有节点通过 = 整体通过**。
 - **双进度 + 固定锚点**：**进度一=用户专用**（只读、不写）；**进度二=团队专用**（可覆盖）；**固定锚点**=节点稳定起点
   （只读，读档/重置数据/直达 URL）。台账见 `templates/anchor-ledger.md`；机器校验用 `tools/verify/anchor_check.py`
@@ -209,12 +214,14 @@ python -B tools/verify/run_verify.py  --backend playtest.json --steps "L1-N01:n0
   `efficiency.md`、`progress-first.md`、`human-ai-dual-progress.md`
 - `scripts/`：Windows 参考后端（`Common.ps1`/`PlaytestKit.ps1`/`Capture.ps1`）、Web 后端（`backends/web/adapter.py`）、
   契约 `backends/CONTRACT.md`
-- `tools/`：`backendlib.py`（统一分发）、`verify/`（step_runner / hud_walker / anchor_check / run_verify）、
+- `tools/`：`backendlib.py`（统一分发）、`verify/`（step_runner / hud_walker / anchor_check / **task_tree** / run_verify）、
   `probes/`、`screen/`、`evidence/`、`metrics/`（Python 3.8+）
-- `templates/`（17 个）：playtest.json、**steps**、task-tree、tester/developer/lead prompt、experience-log、bug-ledger、
+- `templates/`（18 个）：playtest.json、**steps**、task-tree、**task-tree.json**、tester/developer/lead prompt、experience-log、bug-ledger、
   recorder-log、report、acceptance-report、acceptance-report-user、node-metrics、defect-table、ablation-plan、
   anchor-ledger、evidence-index
-- `examples/`：`web-app.json`、`generic-desktop.json`、`pal98-godot.json`、`pal98-walk-specs.json`、`godot-project.md`
+- `examples/`：`web-app.json`、`generic-desktop.json`、`pal98-godot.json`、`pal98-walk-specs.json`、`godot-project.md`、
+  **`task-tree.json` + `steps/notes-A1.json`**（机器可读任务树与节点步骤示例）
 - `tests/`：打包自检 `Test-Plugin.ps1`、Windows 后端真机测试 `Test-Backend.ps1`（fixture 窗口）、
   Web 后端端到端 `Test-WebBackend.py`（headless）
-- 插件清单以 `plugin.json` 为准（v4.0.0：2 个参考后端；templates 17 / references 20 / examples 5）。
+- 插件清单以 `plugin.json` 为准（4.1.0：2 个参考后端；templates 18 / references 20 / examples 7）。
+- `PAPER.md`：论文材料索引（固定路径、数据版本、复现边界）——论文只有本仓库，材料不拆分。

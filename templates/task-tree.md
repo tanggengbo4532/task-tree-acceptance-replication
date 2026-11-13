@@ -28,6 +28,31 @@
 
 **读法**：一行一个节点；做完“事”即进入下一行“地点”。实现细节（内部函数/缓存/脚本 op/调试钩子）不进主线表。
 
+## 1.2 机器可读版本（v4.0 起，与本文档并存）
+
+上表是人读视图；**规则由机器校验**的是同内容的 JSON 版（模板 `templates/task-tree.json`，
+示例 `examples/task-tree.json`）：
+
+```powershell
+python -B tools/verify/task_tree.py check  --tree task-tree.json --root . --manifest evidence/manifest.json
+python -B tools/verify/task_tree.py status --tree task-tree.json     # 是否整体通过
+```
+
+`check` 强制以下规则（不通过即非 0，不可"口头通过"）：
+
+| 规则 | 说明 |
+|---|---|
+| 四要素齐全 | `who/where/action/t_node` 全部非空 |
+| `t_node` 全树唯一 | 复测不改 id，写进 `retries` |
+| 只向前 | `requires` 只能指向**更早**的节点（同时排除环） |
+| 状态机合法 | `not_started → testing → blocked/fixing → passed` 之外一律报错 |
+| **PASS 是终态** | 已通过节点回到 `testing` 必须写 `reopen_reason: user_bug` 或 `code_change` |
+| **三重确认** | 通过节点必须有 tester / developer / lead 三者 `verdict: pass` 且记录 `who`、`t_exec` |
+| 证据可核 | 通过节点至少一条证据，且在 `manifest.json` 里 hash 一致（有 `--manifest` 时） |
+
+用 `status` 判断"是否整体通过"；用 `check` 判断"树本身是否合规"。两者都只读，
+修改通过提交 JSON 文件完成，git 历史即审计线。
+
 ## 2. 线路清单（覆盖应用使用的所有可能线路）
 
 | 线路 | 类型 | 覆盖范围 | 节点数 |

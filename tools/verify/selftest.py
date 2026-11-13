@@ -18,6 +18,7 @@ import hud_walker  # noqa: E402
 import anchor_check  # noqa: E402
 import step_runner  # noqa: E402
 import common  # noqa: E402
+import task_tree  # noqa: E402
 
 
 class Stuck(hud_walker.MockBackend):
@@ -135,6 +136,21 @@ def test_backend_dispatch():
     print('[verify-selftest] backend dispatch OK (windows/web, unknown name, missing path, JSON line)')
 
 
+def test_task_tree():
+    root = os.path.dirname(os.path.dirname(HERE))
+    rc = task_tree.selfcheck.__wrapped__ if False else task_tree.selfcheck()
+    assert rc == 0, 'task_tree selfcheck failed'
+    # the shipped templates/examples must be valid, and a partially-done tree must not report overall pass
+    probs, summary = task_tree.validate(task_tree.load_tree(os.path.join(root, 'templates', 'task-tree.json')),
+                                        os.path.join(root, 'templates'))
+    assert not [x for x in probs if x.severity == 'ERROR'], [str(x) for x in probs]
+    ex = os.path.join(root, 'examples', 'task-tree.json')
+    probs, summary = task_tree.validate(task_tree.load_tree(ex), os.path.join(root, 'examples'))
+    assert not [x for x in probs if x.severity == 'ERROR'], [str(x) for x in probs]
+    assert summary['overall_passed'] is False, 'a tree with open nodes must not be "overall passed"'
+    print('[verify-selftest] task tree rules OK (template valid, partial tree not passed)')
+
+
 def test_contract_and_plugin():
     root = os.path.dirname(os.path.dirname(HERE))
     contract = io.open(os.path.join(root, 'scripts', 'backends', 'CONTRACT.md'), encoding='utf-8').read()
@@ -156,5 +172,6 @@ if __name__ == '__main__':
     test_anchor()
     test_step_runner()
     test_backend_dispatch()
+    test_task_tree()
     test_contract_and_plugin()
     print('[verify-selftest] ALL OK')

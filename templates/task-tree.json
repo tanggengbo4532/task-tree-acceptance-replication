@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "project": "my-app",
+  "version": "v1.0",
+  "updated": "2026-01-01T00:00:00+08:00",
+  "lines": [
+    {
+      "id": "A",
+      "type": "main",
+      "name": "normal path",
+      "scope": ""
+    },
+    {
+      "id": "B",
+      "type": "secondary",
+      "name": "branch / optional"
+    },
+    {
+      "id": "C",
+      "type": "error",
+      "name": "wrong operation / boundary"
+    },
+    {
+      "id": "R",
+      "type": "regression",
+      "name": "one-shot regression"
+    }
+  ],
+  "nodes": [
+    {
+      "t_node": "N0",
+      "line": "A",
+      "who": "user",
+      "where": {
+        "screen": "start",
+        "entry": "launch"
+      },
+      "action": "app starts and reaches the main screen",
+      "requires": [],
+      "state": "not_started",
+      "anchor": "N0-start",
+      "steps": null,
+      "evidence": []
+    },
+    {
+      "t_node": "A1",
+      "line": "A",
+      "who": "user",
+      "where": {
+        "screen": "<screen>",
+        "entry": "<control/path>"
+      },
+      "action": "<real input -> response -> next screen>",
+      "requires": [
+        "N0"
+      ],
+      "state": "not_started",
+      "anchor": "A1-start"
+    },
+    {
+      "t_node": "B1",
+      "line": "B",
+      "who": "user",
+      "where": {
+        "screen": "<screen>",
+        "entry": "<entry>"
+      },
+      "action": "<optional/branch action>",
+      "requires": [
+        "A1"
+      ],
+      "state": "not_started"
+    },
+    {
+      "t_node": "C1",
+      "line": "C",
+      "who": "user",
+      "where": {
+        "screen": "<screen>",
+        "entry": "<entry>"
+      },
+      "action": "<wrong operation or boundary -> expected error, state unchanged>",
+      "requires": [
+        "A1"
+      ],
+      "state": "not_started"
+    },
+    {
+      "t_node": "R1",
+      "line": "R",
+      "who": "user",
+      "where": {
+        "screen": "<screen>",
+        "entry": "<entry>"
+      },
+      "action": "<regression check, run once>",
+      "requires": [
+        "A1"
+      ],
+      "state": "not_started"
+    }
+  ]
+}

@@ -6,9 +6,11 @@
       [--anchor N01-start] [--ledger anchor-ledger.json] [--jsonl report.jsonl] [--out DIR]
   python run_verify.py --backend playtest.json --steps node.json --walk specs.json:path-name
   python run_verify.py --backend playtest.json --steps node.json --launch     # start/stop the app
+  python run_verify.py --backend playtest.json --tree task-tree.json --manifest evidence/manifest.json
   python run_verify.py --selfcheck
 
-Checks, in order: optional launch -> optional anchor check -> steps per node -> optional HUD walks.
+Checks, in order: optional launch -> task-tree rules -> optional anchor check -> steps per node
+-> optional HUD walks.
 Backend lack of ability (exit 2) is reported as `skip`, never as PASS.
 Exit code: 0 = everything passed (skips allowed); 1 = at least one failure; 2 = config error.
 """
@@ -27,6 +29,13 @@ import step_runner  # noqa: E402
 RC_OK, RC_FAIL, RC_CONFIG = 0, 1, 2
 
 
+def _run_child_cmd(cmd):
+    t0 = time.time()
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out = (p.stdout or b'').decode('utf-8', 'replace') + (p.stderr or b'').decode('utf-8', 'replace')
+    return p.returncode, out, round(time.time() - t0, 1)
+
+
 def _run_child(argv):
     t0 = time.time()
     p = subprocess.run([sys.executable, '-B'] + argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -43,6 +52,8 @@ def main():
     ap.add_argument('--walk', default='', help='specs.json:path-name for a HUD walk')
     ap.add_argument('--jsonl', default='verify-report.jsonl')
     ap.add_argument('--out', default='', help='failure snapshot directory (default: the evidence dir)')
+    ap.add_argument('--tree', default='', help='task-tree.json: validate the rules before running')
+    ap.add_argument('--manifest', default='', help='evidence manifest for the task-tree hash check')
     ap.add_argument('--launch', action='store_true', help='launch before and close after (single instance)')
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args()
@@ -68,6 +79,16 @@ def main():
                 add('launch', 'PASS', '', 0)
             except BackendUnsupported:
                 add('launch', 'FAIL', 'backend has no launch action')
+        if a.tree:
+            cmd = [sys.executable, '-B', os.path.join(HERE, 'task_tree.py'), 'check', '--tree', a.tree]
+            if a.manifest:
+                cmd += ['--manifest', a.manifest]
+            rc, out, sec = _run_child_cmd(cmd)
+            state = {0: 'PASS', 1: 'FAIL'}.get(rc, 'CONFIG')
+            tail = [l for l in out.strip().splitlines() if l.startswith('[task_tree]')]
+            detail = tail[-1][len('[task_tree] '):][:110] if tail else 'rc=%d' % rc
+            add('task_tree', state, detail, sec)
+
         if a.anchor:
             rc = step_runner.subprocess.call([sys.executable, '-B', os.path.join(HERE, 'anchor_check.py'),
                                               '--backend', a.backend, '--ledger', a.ledger, '--id', a.anchor],

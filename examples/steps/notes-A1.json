@@ -1,0 +1,39 @@
+{
+  "node": "A1",
+  "name": "sign in and land on the notes list",
+  "steps": [
+    {
+      "do": "click",
+      "value": "css=#user"
+    },
+    {
+      "do": "type",
+      "value": "ann",
+      "expect": {
+        "state": {
+          "focus.value": "ann"
+        }
+      }
+    },
+    {
+      "do": "click",
+      "value": "css=#pass"
+    },
+    {
+      "do": "type",
+      "value": "secret"
+    },
+    {
+      "do": "click",
+      "value": "css=#signin",
+      "expect": {
+        "text_contains": [
+          "Welcome, ann"
+        ],
+        "title_contains": "Notes - List"
+      },
+      "timeout_ms": 3000,
+      "shot": true
+    }
+  ]
+}

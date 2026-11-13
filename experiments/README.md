@@ -2,6 +2,8 @@
 
 本目录存放论文《Task-Tree-Guided Multi-Agent Acceptance Testing: Human-AI Collaboration and Agent-Originated Interface Evolution》引用的实验数据与可复现材料。
 
+> **引用入口**：论文正文引用本目录时，请统一指向仓库根的 [`PAPER.md`](../PAPER.md)（固定路径与数据版本）；本目录不单独发版、不拆分仓库。
+
 ## 数据来源与边界
 
 - 代码 HEAD：`f9972eb`（R311，未改生产代码）

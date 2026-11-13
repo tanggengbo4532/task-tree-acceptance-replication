@@ -12,7 +12,7 @@
 
 ## 核心组成
 
-- **四要素任务树**：每个节点 = 人（谁）/ 地点（在哪）/ 做到什么（事）/ 时间（节点唯一标识 `t_node`）。
+- **四要素任务树**：每个节点 = 人（谁）/ 地点（在哪）/ 做到什么（事）/ 时间（节点唯一标识 `t_node`）；人读版用 Markdown，**规则用机器可读 JSON 校验**（`tools/verify/task_tree.py`：四要素齐全、`t_node` 唯一、只向前、状态机合法、PASS 终态、三重签名为 pass、证据 hash 一致）。
 - **四角色**：Lead（协调）/ 开发（白盒）/ 测试（黑盒）/ 记录（只读），权限隔离、禁止越权。
 - **三重确认**：测试自判 → 开发复核 → Lead 宣布，任一方未完成则继续。
 - **禁作弊红线**：只走用户可达的界面路径；禁止直接改状态/数据库/内部接口、跳过必经流程、自动判定成功、用调试模式取证。
@@ -35,6 +35,7 @@
 - `tools/` — 统一分发 `backendlib.py`；步骤执行器、走位器、锚点检查；量化探针、截图工具、证据清单
 - `tests/` — 打包自检、Windows 后端真机测试（fixture 窗口）、Web 后端端到端测试（headless）
 - `examples/` — 接入示例（Web、桌面、Godot）
+- `PAPER.md` — **论文材料索引**：论文引用的固定路径、数据版本、复现边界（论文只有本仓库，材料不拆分，统一从这里链接）
 - `case-study/` — **案例**：PAL98 Godot 移植源码，含 `before/`（修复前 bug 版）与 `after/`（修复后）对比
 - `experiments/` — **实验数据与可复现包**：HUD 54 runs、经验消融 24 runs、repro 清单与审计
 
@@ -50,6 +51,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Force
 ## 自检
 
 ```powershell
+python -B tools/verify/task_tree.py check --tree task-tree.json                  # 任务树规则校验
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Plugin.ps1    # 打包 + 安装 + Web 端到端
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Backend.ps1   # Windows 后端真机（会开一个测试窗口）
 python -B tests/Test-WebBackend.py                                           # Web 后端真机（headless）

@@ -7,6 +7,32 @@
 
 > 版本号与 `plugin.json` 保持一致。本文件记录对外可见的变化（框架/角色/标准/模板/工具）。
 
+## v4.1.0（2026-11-14）· 任务树机器可读 + 论文材料固定入口
+
+> "节点通过需三重确认""Lead 不得单方面宣布通过"此前只写在 prompt 里。本版把任务树做成 JSON，
+> 由工具强制校验，规则从"自觉"变成"不通过就不是 PASS"。论文材料留在本仓库，新增固定索引。
+
+### 新增
+- `tools/verify/task_tree.py`：任务树 JSON 校验器（`check` / `status`）。
+  - 四要素齐全；`t_node` 全树唯一；`requires` 只能指向更早节点（同时排除环）；
+  - 状态机合法（`not_started → testing → blocked/fixing → passed`）；
+  - **PASS 是终态**：已通过节点回到 `testing` 必须写 `reopen_reason: user_bug|code_change`；
+  - **三重确认**：通过节点必须有 tester / developer / lead 三者 `verdict: pass`，含 `who`/`t_exec`；
+  - **证据可核**：通过节点至少一条证据；带 `--manifest` 时校验文件存在且 sha256 一致（防证据被改写）；
+  - `status` 判断是否整体通过；13 项内置自检（含"必须失败"的反例）。
+- `templates/task-tree.json`：机器可读任务树模板；`templates/task-tree.md` 增加 §1.2 说明两份视图的关系。
+- `examples/task-tree.json` + `examples/steps/notes-A1.json` + `examples/evidence/N0-open.png`：可跑通的示例。
+- `PAPER.md`：**论文材料索引**——固定路径表（框架/契约/实验/案例/任务树快照/经验库/审计）、数据版本、
+  复现边界、以及"v4 工具重跑时失败数可能上升"的说明；`experiments/README.md`、`case-study/README.md`
+  都加了指向它的引用入口。
+- `run_verify.py --tree/--manifest`：一条命令里先校验任务树规则再跑步骤。
+
+### 变更
+- `plugin.json`：4.1.0；注册 `task_tree.py`、`task-tree.json`、新示例。
+- `install.ps1`：新增文件进入必需清单。
+- `tools/verify/selftest.py`：增加任务树规则用例（模板合法、半成品树不得报"整体通过"）。
+- `SKILL.md` / `README.md`：补充机器可读任务树与论文索引。
+
 ## v4.0.0（2026-11-14）· 通用应用化：多后端 + 通用步骤执行器 + 工具不再假通过
 
 > 目标从"游戏验收框架"改为**通用应用测试框架**（桌面软件 / Web / 游戏）。核心方法论
