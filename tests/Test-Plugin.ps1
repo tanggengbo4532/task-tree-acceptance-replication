@@ -89,6 +89,8 @@ Check "install to temp dir + verify" {
                   "scripts\backends\CONTRACT.md",
                   "tools\probes\walkprobe.py", "tools\probes\holdprobe.py", "tools\probes\fps_probe.py",
                   "tools\evidence\manifest.py", "tools\metrics\dsh_metrics.py", "tools\tests\selftest.py",
+                  "tools\verify\task_tree.py", "tools\verify\role_policy.py", "examples\quickstart.py",
+                  "tests\fixtures\webapp\index.html",
                   "templates\playtest.json", "templates\node-metrics.csv", "templates\evidence-index.md",
                   "references\roles\lead.md", "references\standards\no-cheat.md",
                   "references\testing\playbook.md", "CHANGELOG.md", "examples\generic-desktop.json")

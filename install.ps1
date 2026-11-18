@@ -37,11 +37,18 @@ $required = @(
     "tools\verify\hud_walker.py",
     "tools\verify\anchor_check.py",
     "tools\verify\run_verify.py",
+    "tools\verify\step_runner.py",
+    "tools\verify\task_tree.py",
+    "tools\verify\role_policy.py",
     "tools\verify\selftest.py",
     "templates\playtest.json",
     "templates\node-metrics.csv",
     "references\roles\lead.md",
     "references\standards\no-cheat.md",
+    "references\standards\role-permissions.md",
+    "examples\quickstart.py",
+    "examples\steps\notes-A1.json",
+    "tests\fixtures\webapp\index.html",
     "CHANGELOG.md",
     "install.ps1"
 )

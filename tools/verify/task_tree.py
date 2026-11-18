@@ -10,7 +10,7 @@ matter of good faith.
   python -B tools/verify/task_tree.py status --tree task-tree.json
   python -B tools/verify/task_tree.py check  --tree task-tree.json --json
   python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role tester --verdict pass \
-      --who tester --evidence evidence/A1.png [--source tool]
+      --who tester --build BUILD_ID --evidence evidence/A1.png [--source tool]
   python -B tools/verify/task_tree.py reopen --tree task-tree.json --node A1 --reason user_bug --who lead
   python -B tools/verify/task_tree.py --selfcheck
 
@@ -40,15 +40,22 @@ Rules enforced by `check`:
   * a passed node lists at least one evidence file; with --manifest each file must be recorded
     there with a matching sha256 (append-only evidence, no silent rewrites).
 
-The tool is read-only. Nodes are edited in the (versioned, reviewable) JSON file; git history is
-the audit trail.
+Writes use a locked read-validate-replace transaction. Reopen and rejection archive the
+active attempt; fresh evidence and a build ID are required to start the next one.
 """
 import argparse
+from contextlib import contextmanager
+from copy import deepcopy
+from datetime import datetime
 import hashlib
 import json
 import os
 import re
 import sys
+import tempfile
+from uuid import uuid4
+
+from role_policy import authorize
 
 SCHEMA = 1
 STATES = ('not_started', 'testing', 'blocked', 'fixing', 'passed')
@@ -113,11 +120,29 @@ def load_manifest(path):
     out = {}
     for e in data.get('entries', []):
         if e.get('path') and e.get('sha256'):
-            out[os.path.normcase(os.path.abspath(e['path']))] = e['sha256']
+            out[os.path.normcase(os.path.realpath(e['path']))] = e['sha256']
     return out
 
 
-def validate(tree, root='.', manifest=None):
+def evidence_path(root, path):
+    return os.path.realpath(os.path.join(root, path))
+
+
+def evidence_hash(root, path, manifest):
+    full = evidence_path(root, path)
+    if not os.path.isfile(full):
+        raise Refused('evidence not found: %s' % path)
+    digest = sha256(full)
+    if manifest is not None:
+        expected = manifest.get(os.path.normcase(full))
+        if expected is None:
+            raise Refused('evidence not in the manifest: %s (run manifest.py add)' % path)
+        if expected != digest:
+            raise Refused('evidence hash drift: %s' % path)
+    return digest
+
+
+def validate(tree, root='.', manifest=None, evidence_node=None):
     """Return (problems, summary). problems is a list of Problem."""
     p = []
 
@@ -165,7 +190,7 @@ def validate(tree, root='.', manifest=None):
             err(path, 'node must be an object')
             continue
         tn = n.get('t_node')
-        if not _nonempty(tn):
+        if not isinstance(tn, str) or not tn.strip():
             err(path, 'missing t_node (the node identifier)')
             tn = None
         elif not T_NODE_RE.match(str(tn)):
@@ -225,8 +250,44 @@ def validate(tree, root='.', manifest=None):
         if st == 'passed' and not hist:
             warn(path, 'passed without history: the three confirmations cannot be dated')
 
-        # a passed node needs the three confirmations and evidence
         conf = n.get('confirmations') or {}
+        ev = n.get('evidence') or []
+        if not isinstance(conf, dict) or not isinstance(ev, list) or not all(
+                isinstance(rel, str) and rel.strip() for rel in ev):
+            err(path, 'confirmations must be an object and evidence must be a list of paths')
+            continue
+        attempt = n.get('attempt')
+        if attempt is not None:
+            if not isinstance(attempt, dict) or not all(
+                    isinstance(attempt.get(key), str) and attempt[key].strip()
+                    for key in ('id', 'build')):
+                err(path, 'attempt requires an ID and a build')
+                continue
+            hashes = attempt.get('sha256')
+            if not isinstance(hashes, dict) or not ev or hashes.keys() != set(ev):
+                err(path, 'the attempt must bind every evidence file to its SHA-256')
+                continue
+            for role, confirmation in conf.items():
+                if not isinstance(confirmation, dict) or confirmation.get('attempt_id') != attempt['id']:
+                    err(path, 'confirmation "%s" belongs to a different attempt' % role)
+            if evidence_node is None or tn == evidence_node:
+                for rel in ev:
+                    try:
+                        if evidence_hash(root, rel, manifest) != hashes[rel]:
+                            err(path, 'evidence changed since the tester recorded it: %s' % rel)
+                    except (OSError, Refused) as e:
+                        err(path, str(e))
+        elif st == 'passed':
+            warn(path, 'legacy pass without a build or attempt binding (reopen to obtain a current pass)')
+            if any(isinstance(h, dict) and h.get('from') == 'passed' for h in hist):
+                err(path, 'legacy pass was reissued after reopening without a fresh attempt binding')
+            if evidence_node is None or tn == evidence_node:
+                for rel in ev:
+                    try:
+                        evidence_hash(root, rel, manifest)
+                    except (OSError, Refused) as e:
+                        err(path, str(e))
+
         if st == 'passed':
             for role in ROLES:
                 c = conf.get(role)
@@ -239,24 +300,10 @@ def validate(tree, root='.', manifest=None):
                     err(path, 'confirmation "%s" has no "who"' % role)
                 if not _nonempty(c.get('t_exec')):
                     warn(path, 'confirmation "%s" has no t_exec' % role)
-            ev = n.get('evidence') or []
             if not ev:
                 err(path, 'passed but lists no evidence')
-            for rel in ev:
-                full = rel if os.path.isabs(rel) else os.path.join(root, rel)
-                if not os.path.isfile(full):
-                    err(path, 'evidence not found: %s' % rel)
-                    continue
-                if manifest is not None:
-                    want = manifest.get(os.path.normcase(os.path.abspath(full)))
-                    if want is None:
-                        err(path, 'evidence not in the manifest: %s (run manifest.py add)' % rel)
-                    elif want != sha256(full):
-                        err(path, 'evidence hash drift (file changed after it was recorded): %s' % rel)
-        else:
-            for role in ROLES:
-                if role in conf:
-                    warn(path, 'confirmation "%s" recorded on a %r node' % (role, st))
+        elif conf and attempt is None:
+            warn(path, 'legacy confirmations on an open node (a fresh tester verdict is required)')
 
     # every line needs at least one node
     used = set(n.get('line') for n in nodes if isinstance(n, dict))
@@ -272,12 +319,13 @@ class Refused(Exception):
     """A write that the rules do not allow (exit code 1); nothing is written."""
 
 
-def now_iso(offset='+08:00'):
-    import time
-    return time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime()) + offset
+def now_iso():
+    return datetime.now().astimezone().isoformat(timespec='seconds')
 
 
 def find_node(tree, t_node):
+    if not isinstance(tree, dict):
+        raise Refused('task tree must be a JSON object')
     for n in tree.get('nodes') or []:
         if isinstance(n, dict) and n.get('t_node') == t_node:
             return n
@@ -299,125 +347,219 @@ def _set_state(node, new, t_exec, **extra):
     node['state'] = new
 
 
-def record(tree, t_node, role, verdict, who, evidence=(), source='manual', t_exec=None, note=''):
-    """Record ONE role's verdict. Returns (changed, message).
+def archive_attempt(node, **details):
+    previous = {}
+    for key in ('attempt', 'confirmations', 'evidence'):
+        value = node.pop(key, None)
+        if value:
+            previous[key] = value
+    previous.update(details)
+    if previous:
+        node.setdefault('previous_attempts', []).append(previous)
 
-    The tool may only ever write the tester's verdict; developer review and lead announcement are
-    human actions and are refused when requested by a tool. A node reaches `passed` only on the
-    lead's pass, and only when tester and developer have both passed already.
-    """
+
+def record(tree, t_node, role, verdict, who, evidence=(), source='manual',
+           t_exec=None, note='', *, build=None, attempt_id=None, root='.', manifest=None,
+           principal=None):
+    """Record one role against the current build and evidence snapshot."""
     if role not in ROLES:
         raise Refused('role must be one of %s' % '/'.join(ROLES))
     if verdict not in ('pass', 'reject'):
         raise Refused('verdict must be pass or reject')
     if source == 'tool' and role != 'tester':
-        raise Refused('a tool may only record the tester\'s own verdict; "%s" confirmation must be made by a '
-                      'person (developer review / lead announcement cannot be automated)' % role)
-    if not _nonempty(who):
-        raise Refused('--who is required (the verdict must name who gave it)')
-    node = find_node(tree, t_node)
+        raise Refused('a tool may only record the tester verdict; %s must be reviewed by a person' % role)
+    if not isinstance(who, str) or not who.strip():
+        raise Refused('--who is required')
+    original = find_node(tree, t_node)
+    node = deepcopy(original)
     t_exec = t_exec or now_iso()
-    if not ISO_RE.match(t_exec):
+    if not ISO_RE.fullmatch(t_exec):
         raise Refused('t_exec must be ISO-8601: %r' % t_exec)
     st = _cur_state(node)
     if st == 'passed':
-        raise Refused('node %s is already passed; reopen it first (PASS is final)' % t_node)
+        raise Refused('node %s is already passed; reopen it first' % t_node)
 
-    conf = node.setdefault('confirmations', {})
     entry = {'who': who, 'verdict': verdict, 't_exec': t_exec, 'source': source}
+    if principal:
+        entry['principal'] = principal
     if note:
         entry['note'] = note
-    conf[role] = entry
-    if evidence:
-        ev = node.setdefault('evidence', [])
-        for rel in evidence:
-            if rel not in ev:
-                ev.append(rel)
-
+    attempt = node.get('attempt')
+    if attempt_id and (not attempt or attempt_id != attempt['id']):
+        raise Refused('this review refers to a different attempt; inspect the current evidence')
     if verdict == 'reject':
-        # a rejection sends the node back to work, never forward
+        if attempt is not None and build and build != attempt['build']:
+            raise Refused('rejection build does not match the current attempt')
+        archive_attempt(node, rejection=dict(entry, role=role, build=build, evidence={
+            path: evidence_hash(root, path, manifest) for path in evidence
+        }))
         if st == 'not_started':
             _set_state(node, 'testing', t_exec)
             st = 'testing'
-        if st == 'testing':
+        if st != 'fixing':
             _set_state(node, 'fixing', t_exec)
-        return True, 'node %s: %s verdict = reject (state %s)' % (t_node, role, _cur_state(node))
+        msg = 'node %s: %s rejected the result; a fresh tester verdict is required' % (t_node, role)
+    elif role == 'tester':
+        build = build or tree.get('build')
+        if not isinstance(build, str) or not build.strip():
+            raise Refused('tester pass requires --build or a build ID in the task tree')
+        if not evidence:
+            raise Refused('tester pass requires at least one evidence file from this run')
+        build = build.strip()
+        last_reopen = next((event for event in reversed(node.get('history', []))
+                            if event.get('from') == 'passed'), {})
+        if last_reopen.get('reopen_reason') == 'code_change' and last_reopen.get('previous_build') == build:
+            raise Refused('a code-change retest requires a different build ID')
+        previous_paths = {
+            os.path.normcase(evidence_path(root, rel))
+            for previous in [node, *node.get('previous_attempts', [])]
+            for rel in (*previous.get('evidence', ()), *previous.get('rejection', {}).get('evidence', {}))
+        }
+        hashes = {}
+        for rel in evidence:
+            full = evidence_path(root, rel)
+            if os.path.normcase(full) in previous_paths:
+                raise Refused('evidence path belongs to a previous verdict; capture fresh evidence: %s' % rel)
+            stored = os.path.normpath(rel)
+            hashes[stored] = evidence_hash(root, stored, manifest)
+        archive_attempt(node)
+        attempt = {'id': uuid4().hex, 'build': build, 'sha256': hashes}
+        node.update(attempt=attempt, evidence=list(hashes),
+                    confirmations={'tester': dict(entry, attempt_id=attempt['id'])})
+        if st != 'testing':
+            _set_state(node, 'testing', t_exec)
+        msg = 'node %s: tester verdict recorded for build %s, attempt %s; awaiting developer review' % (
+            t_node, build, attempt['id'])
+    else:
+        if evidence:
+            raise Refused('reviewers sign the tester evidence snapshot; start a new tester verdict to replace it')
+        conf = node.get('confirmations', {})
+        required = ROLES[:ROLES.index(role)]
+        for prior in required:
+            confirmation = conf.get(prior, {})
+            if not (attempt and confirmation.get('verdict') == 'pass'
+                    and confirmation.get('attempt_id') == attempt['id']):
+                raise Refused('%s requires a current %s pass for this attempt' % (role, prior))
+        if not attempt_id:
+            raise Refused('review requires --attempt with the ID of the tester evidence you reviewed')
+        if build and build != attempt['build']:
+            raise Refused('review build does not match the current attempt')
+        if not node.get('evidence'):
+            raise Refused('the lead cannot announce a pass without evidence from this attempt')
+        conf[role] = dict(entry, attempt_id=attempt['id'])
+        if role == 'lead':
+            _set_state(node, 'passed', t_exec, attempt_id=attempt['id'], build=attempt['build'])
+            msg = 'node %s: PASSED (build %s, attempt %s)' % (t_node, attempt['build'], attempt['id'])
+        else:
+            msg = 'node %s: developer reviewed build %s; awaiting lead confirmation' % (t_node, attempt['build'])
 
-    if st == 'not_started':
-        _set_state(node, 'testing', t_exec)
-        st = 'testing'
-    if role == 'tester':
-        msg = 'node %s: tester self-judgement recorded; awaiting developer review' % t_node
-    elif role == 'developer':
-        if (conf.get('tester') or {}).get('verdict') != 'pass':
-            raise Refused('developer review requires the tester\'s pass first')
-        msg = 'node %s: developer review recorded; awaiting the lead announcement' % t_node
-    else:  # lead
-        for r in ('tester', 'developer'):
-            if (conf.get(r) or {}).get('verdict') != 'pass':
-                raise Refused('the lead cannot announce a pass before %s has passed' % r)
-        if not (node.get('evidence') or []):
-            raise Refused('the lead cannot announce a pass without evidence on node %s '
-                          '(attach at least one screenshot/log first)' % t_node)
-        _set_state(node, 'passed', t_exec)
-        msg = 'node %s: PASSED (tester -> developer -> lead, evidence %d)' % (t_node, len(node.get('evidence') or []))
+    original.clear()
+    original.update(node)
     return True, msg
 
 
-def reopen(tree, t_node, reason, who, t_exec=None):
+def reopen(tree, t_node, reason, who, t_exec=None, *, principal=None):
     if reason not in REOPEN_REASONS:
-        raise Refused('reason must be one of %s (PASS is final otherwise)' % '/'.join(REOPEN_REASONS))
-    if not _nonempty(who):
+        raise Refused('reason must be one of %s' % '/'.join(REOPEN_REASONS))
+    if not isinstance(who, str) or not who.strip():
         raise Refused('--who is required')
     node = find_node(tree, t_node)
     if _cur_state(node) != 'passed':
         raise Refused('node %s is %s, not passed; nothing to reopen' % (t_node, _cur_state(node)))
     t_exec = t_exec or now_iso()
-    _set_state(node, 'testing', t_exec, reopen_reason=reason, by=who)
-    return True, 'node %s reopened for %s; confirmations must be given again' % (t_node, reason)
+    if not ISO_RE.fullmatch(t_exec):
+        raise Refused('t_exec must be ISO-8601: %r' % t_exec)
+    previous_build = (node.get('attempt') or {}).get('build')
+    actor = {'by': who}
+    if principal:
+        actor['principal'] = principal
+    archive_attempt(node, reopened=dict(actor, reason=reason, t_exec=t_exec))
+    _set_state(node, 'testing', t_exec, reopen_reason=reason, previous_build=previous_build, **actor)
+    return True, 'node %s reopened for %s; fresh evidence and confirmations are required' % (t_node, reason)
+
+
+@contextmanager
+def tree_lock(path):
+    """Serialize whole-file edits across CLI/step-runner processes."""
+    with open(path + '.lock', 'a+b') as lock:
+        if os.name == 'nt':
+            import msvcrt
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        # Closing the handle releases the lock, including on errors.
+        yield
 
 
 def save_tree(tree, path):
-    """Write atomically; indent 2 and a trailing newline keep diffs reviewable."""
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
-        json.dump(tree, f, ensure_ascii=False, indent=2)
-        f.write('\n')
-    os.replace(tmp, path)
+    tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', newline='\n',
+                                         dir=os.path.dirname(os.path.abspath(path)), suffix='.tmp', delete=False) as f:
+            tmp = f.name
+            json.dump(tree, f, ensure_ascii=False, indent=2)
+            f.write('\n')
+        os.replace(tmp, path)
+    finally:
+        if tmp and os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+def edit_tree(path, t_node, role, who, edit, *, root=None, manifest_path=None,
+              dry_run=False, test_context=None):
+    path = os.path.realpath(path)
+    base = root or os.path.dirname(path)
+    with tree_lock(path):
+        tree = load_tree(path)
+        principal, roles = authorize(tree, path, role, who)
+        if test_context is not None and test_context != (
+                find_node(tree, t_node), tree.get('build'), tree.get('role_policy')):
+            raise Refused('the node or task-tree configuration changed while testing; rerun the node')
+        manifest = load_manifest(manifest_path) if manifest_path else None
+        changed, message = edit(tree, base, manifest, principal)
+        if roles:
+            confirmations = find_node(tree, t_node).get('confirmations', {})
+            for confirmed_role, confirmation in confirmations.items():
+                if (confirmed_role not in roles or not isinstance(confirmation, dict)
+                        or confirmation.get('principal') != roles[confirmed_role]):
+                    raise Refused('the %s confirmation predates the current role policy; retest the node'
+                                  % confirmed_role)
+        problems, summary = validate(tree, base, manifest, evidence_node=t_node)
+        errors = [str(p) for p in problems if p.severity == 'ERROR']
+        if errors:
+            raise Refused('\n'.join(errors))
+        if changed and not dry_run:
+            save_tree(tree, path)
+        return message, summary
 
 
 def _write_command(a):
-    """record / reopen: one atomic, rule-checked edit of the JSON tree."""
-    try:
-        tree = load_tree(a.tree)
-    except (IOError, OSError, ValueError) as e:
-        print('[task_tree] cannot read: %s' % e, file=sys.stderr)
-        return 2
     if not a.node:
         print('[task_tree] --node is required for %s' % a.command, file=sys.stderr)
         return 2
+
+    def apply(tree, root, manifest, principal):
+        if a.command == 'reopen':
+            return reopen(tree, a.node, a.reason, a.who, a.t_exec or None, principal=principal)
+        return record(tree, a.node, a.role, a.verdict, a.who, a.evidence,
+                      a.source, a.t_exec or None, a.note, build=a.build, attempt_id=a.attempt,
+                      root=root, manifest=manifest, principal=principal)
+
     try:
-        if a.command == 'record':
-            changed, msg = record(tree, a.node, a.role, a.verdict, a.who, a.evidence,
-                                  a.source, a.t_exec or None, a.note)
-        else:
-            changed, msg = reopen(tree, a.node, a.reason, a.who, a.t_exec or None)
-    except Refused as e:
+        message, summary = edit_tree(a.tree, a.node, 'lead' if a.command == 'reopen' else a.role,
+                                     a.who, apply, root=a.root, manifest_path=a.manifest, dry_run=a.dry_run)
+    except (Refused, PermissionError) as e:
         print('[task_tree] refused: %s' % e, file=sys.stderr)
         return 1
-    # the edit must leave a tree that can still be checked; report (do not silently accept) breakage
-    root = a.root or os.path.dirname(os.path.abspath(a.tree))
-    problems, summary = validate(tree, root, None)
-    errs = [str(x) for x in problems if x.severity == 'ERROR']
-    if not a.dry_run:
-        save_tree(tree, a.tree)
-    print('[task_tree] %s%s' % (msg, ' (dry-run, nothing written)' if a.dry_run else ''))
-    for e in errs:
-        print('  ' + e)
+    except (OSError, ValueError) as e:
+        print('[task_tree] cannot update: %s' % e, file=sys.stderr)
+        return 2
+    print('[task_tree] %s%s' % (message, ' (dry-run, nothing written)' if a.dry_run else ''))
     print('[task_tree] %s %s: %d/%d passed' % (summary.get('project') or '?', summary.get('version') or '',
                                                summary['nodes_passed'], summary['nodes_total']))
     return 0
-
 
 def summarize(tree):
     nodes = [n for n in tree.get('nodes') or [] if isinstance(n, dict)]
@@ -452,6 +594,8 @@ def main(argv=None):
     ap.add_argument('--verdict', default='pass', help='record: pass | reject (default pass)')
     ap.add_argument('--who', default='', help='record/reopen: who gives the verdict')
     ap.add_argument('--evidence', action='append', default=[], help='record: evidence path to attach (repeatable)')
+    ap.add_argument('--build', help='record: build ID for a new tester pass, or expected build for review')
+    ap.add_argument('--attempt', help='record: review the specified tester attempt ID')
     ap.add_argument('--source', default='manual', choices=('manual', 'tool'),
                     help='record: "tool" may only write the tester verdict (used by step_runner)')
     ap.add_argument('--t-exec', dest='t_exec', default='', help='record/reopen: ISO-8601 time (default now)')
@@ -478,6 +622,8 @@ def main(argv=None):
     problems, summary = validate(tree, root, manifest)
     errors = [x for x in problems if x.severity == 'ERROR']
     failed = errors or (a.strict and problems)
+    if failed:
+        summary['overall_passed'] = False
 
     if a.as_json:
         print(json.dumps({'ok': not failed, 'problems': [str(x) for x in problems], 'summary': summary},
@@ -569,7 +715,9 @@ def selfcheck():
         refusal = None
         try:
             for kwargs in steps(t):
-                record(t, 'A1', **kwargs)
+                if kwargs['role'] in ('developer', 'lead'):
+                    kwargs = dict(kwargs, attempt_id=t['nodes'][1].get('attempt', {}).get('id'))
+                record(t, 'A1', root=tmp, **kwargs)
         except Refused as e:
             ok = False
             refusal = str(e)
@@ -581,7 +729,9 @@ def selfcheck():
             good = good and refusal is not None and want_refuse_role in refusal
         cases.append((name, good, [refusal or 'state=%s' % n.get('state')]))
 
-    tester = dict(role='tester', verdict='pass', who='tester', evidence=['shot.png'])
+    tester = dict(role='tester', verdict='pass', who='tester', evidence=['fresh.png'], build='demo-v1')
+    with open(os.path.join(tmp, 'fresh.png'), 'wb') as f:
+        f.write(b'fresh evidence')
     dev = dict(role='developer', verdict='pass', who='developer')
     lead = dict(role='lead', verdict='pass', who='lead')
 
@@ -639,6 +789,7 @@ def selfcheck():
     double_pass('a passed node refuses new verdicts until reopened')
 
 
+    _check_edits(tmp, tree, cases)
     bad = [c for c in cases if not c[1]]
     for name, ok, probs in cases:
         print('%s  %s' % ('PASS ' if ok else 'FAIL ', name))
@@ -647,6 +798,100 @@ def selfcheck():
     print('[task_tree] selfcheck %d/%d, overall=%s, partial=%s'
           % (len(cases) - len(bad), len(cases), allpass['overall_passed'], summary['overall_passed']))
     return 0 if not bad and allpass['overall_passed'] and not summary['overall_passed'] else 1
+
+
+def _check_edits(tmp, tree, cases):
+    from contextlib import redirect_stdout, redirect_stderr
+    from io import StringIO
+    from pathlib import Path
+    from role_policy import current_principal
+
+    path = Path(tmp) / 'edits.json'
+    save_tree(tree, str(path))
+
+    def command(action, *args):
+        with redirect_stdout(StringIO()), redirect_stderr(StringIO()):
+            return main([action, '--tree', str(path), '--node', 'A1', *args])
+
+    def sign(role, *args):
+        return command('record', '--role', role, '--who', role, *args)
+
+    def active():
+        return find_node(load_tree(path), 'A1')
+
+    def unchanged(name, fn):
+        before = path.read_bytes()
+        rc = fn()
+        cases.append((name, rc != 0 and before == path.read_bytes(), ['rc=%s' % rc]))
+
+    unchanged('missing evidence leaves the tree untouched',
+              lambda: sign('tester', '--build', 'one', '--evidence', 'missing.png'))
+    rc = sign('tester', '--build', 'one', '--evidence', 'fresh.png')
+    attempt = active()['attempt']['id']
+    cases.append(('tester seals the active evidence', rc == 0 and bool(attempt), []))
+    unchanged('review on another build leaves no confirmation',
+              lambda: sign('developer', '--attempt', attempt, '--build', 'two'))
+    unchanged('review without an explicit attempt is refused',
+              lambda: sign('developer'))
+    rc = sign('developer', '--attempt', attempt)
+    assert rc == 0
+
+    evidence = Path(tmp) / 'fresh.png'
+    original = evidence.read_bytes()
+    evidence.write_bytes(b'drift')
+    unchanged('changed evidence blocks final approval',
+              lambda: sign('lead', '--attempt', attempt))
+    evidence.write_bytes(original)
+    manifest_path = Path(tmp, 'manifest.json')
+    manifest_path.write_text(json.dumps({'entries': [{'path': str(evidence), 'sha256': 'incorrect'}]}))
+    unchanged('approval respects the supplied evidence manifest',
+              lambda: sign('lead', '--attempt', attempt, '--manifest', str(manifest_path)))
+    assert sign('lead', '--attempt', attempt) == 0
+    assert command('reopen', '--reason', 'code_change', '--who', 'lead') == 0
+    reopened = active()
+    cases.append(('reopen archives the old attempt and clears current approvals',
+                  reopened['state'] == 'testing' and 'confirmations' not in reopened
+                  and 'evidence' not in reopened and reopened['previous_attempts'][-1]['attempt']['id'] == attempt, []))
+    unchanged('reopen refuses a lead approval from the previous attempt',
+              lambda: sign('lead', '--attempt', attempt))
+    unchanged('reopen refuses reuse of the previous evidence path',
+              lambda: sign('tester', '--build', 'two', '--evidence', 'fresh.png'))
+
+    Path(tmp, 'retest.png').write_bytes(original)
+    unchanged('code-change retest refuses the previous build',
+              lambda: sign('tester', '--build', 'one', '--evidence', 'retest.png'))
+    context = (reopened, None, None)
+    assert sign('tester', '--build', 'two', '--evidence', 'retest.png') == 0
+    before = path.read_bytes()
+    try:
+        edit_tree(path, 'A1', 'tester', 'tester', lambda *args: (True, 'stale'),
+                  test_context=context)
+        stale_refused = False
+    except Refused:
+        stale_refused = True
+    cases.append(('a step runner cannot publish against a node changed during testing',
+                  stale_refused and path.read_bytes() == before, []))
+    new_attempt = active()['attempt']['id']
+    unchanged('in-flight review of a replaced attempt is refused',
+              lambda: sign('developer', '--attempt', attempt))
+    assert sign('developer', '--attempt', new_attempt) == 0
+    rc = sign('lead', '--attempt', new_attempt)
+    cases.append(('fresh retest can complete all three confirmations',
+                  rc == 0 and active()['state'] == 'passed' and attempt != new_attempt, []))
+
+    principal = current_principal()
+    other = 'uid:2147483647' if os.name != 'nt' else 'S-1-5-21-1-2-3-2147483647'
+    third = 'uid:2147483646' if os.name != 'nt' else 'S-1-5-21-1-2-3-2147483646'
+    policy_path = Path(tmp) / 'roles.json'
+    policy_path.write_text(json.dumps({'lead': principal, 'tester': other, 'developer': third}))
+    configured = load_tree(path)
+    configured['role_policy'] = policy_path.name
+    save_tree(configured, str(path))
+    rc = command('reopen', '--reason', 'user_bug', '--who', 'lead')
+    cases.append(('host role policy records the assigned lead account',
+                  rc == 0 and active()['history'][-1]['principal'] == principal, []))
+    unchanged('host role policy refuses a tester verdict from the lead account',
+              lambda: sign('tester', '--build', 'two', '--evidence', 'shot.png'))
 
 
 if __name__ == '__main__':

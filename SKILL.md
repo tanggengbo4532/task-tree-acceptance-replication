@@ -3,7 +3,7 @@ name: game-playtest
 description: 通用应用黑盒验收框架（桌面软件/Web/游戏；引擎无关 + backend 可插拔）：固定 4 Agent（Lead 只协调 / 开发白盒 / 测试黑盒 / 记录只读），按「线路→任务树→节点」逐节点验收，节点用四要素描述（人/地点/做到什么/时间=节点唯一标识），节点完成需三重确认（测试自判→开发复核→Lead 宣布）；禁作弊红线（只走用户可达路径、不直接改状态/数据）；用户数据与测试数据隔离；经验库复用、困难即停、锚点纪律、只增证据；附可观测性设计原则、通用步骤执行器、量化探针、证据/归档/人读验收模板。
 ---
 
-# 通用应用测试框架 v4.2（4 Agent · 四要素任务树验收 · 应用无关 · backend 可插拔）
+# 通用应用测试框架 v4.3（4 Agent · 四要素任务树验收 · 应用无关 · backend 可插拔）
 
 > **一句话**：把"像真实用户一样把应用用通"拆成**任务树节点**，由固定 4 个 Agent 分工闭环：
 > Lead 协调、开发白盒修、测试黑盒验、记录只读归档；**节点全部通过才算整体通过**，
@@ -57,16 +57,13 @@ description: 通用应用黑盒验收框架（桌面软件/Web/游戏；引擎�
     - 禁止只拿 wall clock 当主键；同一节点复测标记 `t_node#retryN`（ID 不变，不新建节点）。
 - **节点顺序 = 前进方向（写死）**：每节点起点=上一节点终点，只向前推进；**不做回头路验收**；防回归项单独标注、只做一次。
 - 节点附加字段：编号、线路、前置、**起始锚点**、**时间标识（t_node/t_exec）**、状态、证据前缀。
-- **机器可读（v4.0 起，写死）**：任务树同时维护一份 JSON（模板 `templates/task-tree.json`），由
-  `tools/verify/task_tree.py check` 强制校验：四要素齐全、`t_node` 唯一、`requires` 只指向更早节点、
-  状态机合法、**PASS 是终态**（重开必须写 `reopen_reason: user_bug|code_change`）、**通过节点必须有
-  tester/developer/lead 三方 `verdict: pass`** 且证据在 manifest 里 hash 一致。"Lead 不得单方面宣布通过"
-  由此成为硬约束，而不是自觉。`status` 子命令判断是否整体通过。
-- **三重确认的写入方式（v4.2，写死）**：`task_tree.py record` 每次只写**一个角色**；
-  `--source tool` 只允许签 **tester**（`step_runner` 通过后自动写入测试自判，并保留终态截图作证据）；
-  **开发复核与 Lead 宣布必须是人工调用**，工具代签直接拒绝；Lead 宣布还要求 tester、developer 均 pass
-  **且节点已有证据**；`reject` 只会把节点推进 `fixing`；已通过节点拒绝新判定，必须先
-  `task_tree.py reopen --reason user_bug|code_change`。**没有任何一条命令能单独把节点变成 passed。**
+- **机器可读**：用 `templates/task-tree.json` 和 `task_tree.py check` 校验四要素、唯一节点 ID、
+  前置节点顺序、状态迁移和验收证据。`status` 判断整体是否通过。
+- **三重确认**：步骤执行器只有在抓到终态截图后才登记测试自判。测试自判声明构建 ID 并保存证据 SHA-256。
+  开发和 Lead 审阅后，分别用 `--attempt` 指明审阅的轮次。通过前重新核验证据。拒绝或重开时归档旧判定，后续复测重新取证。
+  `reopen` 要求原因 `user_bug` 或 `code_change`，后者需要换用新构建 ID。
+- **部署权限**：角色提示词约定职责。需要将判定权绑定到进程身份时，启用 `role_policy`，并在宿主配置角色的
+  工具和文件访问范围。见 [角色权限部署](references/standards/role-permissions.md)。
 - 状态机：`未开始 → 测试中 → 阻塞 → 修复中 → 已通过（存档）`；**全部线路所有节点通过 = 整体通过**。
 - **双进度 + 固定锚点**：**进度一=用户专用**（只读、不写）；**进度二=团队专用**（可覆盖）；**固定锚点**=节点稳定起点
   （只读，读档/重置数据/直达 URL）。台账见 `templates/anchor-ledger.md`；机器校验用 `tools/verify/anchor_check.py`
@@ -187,8 +184,8 @@ description: 通用应用黑盒验收框架（桌面软件/Web/游戏；引擎�
 ```powershell
 python -B tools/verify/step_runner.py --backend playtest.json --steps n01.json --jsonl trace.jsonl
 python -B tools/verify/run_verify.py  --backend playtest.json --steps "L1-N01:n01.json,L1-N02:n02.json" --anchor N01-start
-python -B tools/verify/task_tree.py record --tree task-tree.json --node N01 --role developer --verdict pass --who dev
-python -B tools/verify/task_tree.py record --tree task-tree.json --node N01 --role lead --verdict pass --who lead
+python -B tools/verify/task_tree.py record --tree task-tree.json --node N01 --role developer --verdict pass --who dev --attempt ATTEMPT_ID
+python -B tools/verify/task_tree.py record --tree task-tree.json --node N01 --role lead --verdict pass --who lead --attempt ATTEMPT_ID
 ```
 
 ## 10. 用户现场 bug 修复流程（用户报告的问题优先）

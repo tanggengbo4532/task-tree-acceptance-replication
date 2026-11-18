@@ -244,8 +244,13 @@ def run(backend, spec, jsonl='', out_dir=''):
         if step.get('shot') or i == len(spec['steps']):
             # last step always keeps a frame: a passed node needs evidence
             try:
-                rec['shot'] = backend.shot('%s_s%02d' % (node, i))
+                shot = backend.shot('%s_s%02d' % (node, i))
+                if not shot or not os.path.isfile(shot):
+                    raise BackendError('screenshot backend did not return a file: %s' % shot)
+                rec['shot'] = shot
                 summary.setdefault('evidence', []).append(rec['shot'])
+                if i == len(spec['steps']):
+                    summary['final_evidence'] = rec['shot']
             except Exception as e:
                 rec['shot_error'] = str(e)
         _append(jsonl, rec)
@@ -332,21 +337,6 @@ SELFCHECK_STEPS = {'node': 'MOCK-N01', 'steps': [
 ]}
 
 
-def record_tester_verdict(tree_path, node, who, evidence, t_exec=None):
-    """Write ONLY the tester's self-judgement into the task tree.
-
-    Called after the steps passed. Developer review and the lead announcement are deliberately not
-    written here: they are separate human actions (task_tree.py record --role developer|lead), so a
-    test run can never produce a "passed" node by itself.
-    """
-    sys.path.insert(0, HERE)
-    import task_tree
-    tree = task_tree.load_tree(tree_path)
-    _changed, msg = task_tree.record(tree, node, 'tester', 'pass', who, evidence, source='tool', t_exec=t_exec)
-    task_tree.save_tree(tree, tree_path)
-    return msg
-
-
 def main():
     ap = argparse.ArgumentParser(description='run a node\'s steps through a backend and assert every response')
     ap.add_argument('--backend', help='playtest.json (or legacy per-action cmd config)')
@@ -355,6 +345,7 @@ def main():
     ap.add_argument('--out', default='', help='directory for failure snapshots (default: the evidence dir)')
     ap.add_argument('--tree', default='', help='task-tree.json: after a pass, record the TESTER self-judgement here')
     ap.add_argument('--who', default='tester', help='--tree: who gives the tester verdict (default tester)')
+    ap.add_argument('--build', help='--tree: ID of the application build under test')
     ap.add_argument('--selfcheck', action='store_true')
     a = ap.parse_args()
     if a.selfcheck:
@@ -376,16 +367,45 @@ def main():
     except (OSError, ValueError) as e:
         print('[step_runner] cannot read steps file: %s' % e, file=sys.stderr)
         return RC_CONFIG
-    rc, summary = run(backend, spec, a.jsonl, a.out)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
-    if a.tree and rc == RC_OK:
-        # only the tester's own verdict is written; developer/lead stay human actions
+    if a.tree:
+        import task_tree
+        a.tree = os.path.realpath(a.tree)
         try:
-            evidence = list(summary.get('evidence') or [])
-            print('[step_runner] ' + record_tester_verdict(a.tree, summary['node'], a.who, evidence))
-        except Exception as e:
-            print('[step_runner] could not record the tester verdict in %s: %s' % (a.tree, e), file=sys.stderr)
+            tree = task_tree.load_tree(a.tree)
+            task_tree.authorize(tree, a.tree, 'tester', a.who)
+            node = task_tree.find_node(tree, spec.get('node'))
+            if node.get('state') == 'passed':
+                raise task_tree.Refused('reopen the passed node before retesting')
+            build = a.build or tree.get('build')
+            if not isinstance(build, str) or not build.strip():
+                raise task_tree.Refused('--tree requires --build or a build ID in the task tree')
+            test_context = (node, tree.get('build'), tree.get('role_policy'))
+        except (OSError, ValueError, task_tree.Refused) as e:
+            print('[step_runner] could not start a tester attempt: %s' % e, file=sys.stderr)
             return RC_CONFIG
+    rc, summary = run(backend, spec, a.jsonl, a.out)
+    message = ''
+    if a.tree and rc == RC_OK:
+        try:
+            if not summary.get('final_evidence'):
+                raise task_tree.Refused('final screenshot was not captured')
+            evidence = [os.path.abspath(path) for path in summary['evidence']]
+
+            def record(tree, root, manifest, principal):
+                return task_tree.record(tree, summary['node'], 'tester', 'pass', a.who, evidence,
+                                        source='tool', build=build, root=root, manifest=manifest,
+                                        principal=principal)
+
+            message, _ = task_tree.edit_tree(a.tree, summary['node'], 'tester', a.who, record,
+                                             test_context=test_context)
+            summary['tester_recorded'] = True
+        except (OSError, ValueError, task_tree.Refused) as e:
+            print('[step_runner] could not record the tester verdict in %s: %s' % (a.tree, e), file=sys.stderr)
+            summary.update(ok=False, tester_recorded=False, record_error=str(e))
+            rc = RC_CONFIG
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    if message:
+        print('[step_runner] ' + message)
     print('[step_runner] %s node=%s steps=%d/%d' % ('PASS' if rc == RC_OK else ('FAIL' if rc == RC_FAIL else 'CONFIG ERROR'),
                                                     summary.get('node', '?'), summary.get('steps_passed', 0),
                                                     summary.get('steps_total', 0)))

@@ -47,34 +47,42 @@ python -B tools/verify/task_tree.py status --tree task-tree.json     # 是否整
 | 只向前 | `requires` 只能指向**更早**的节点（同时排除环） |
 | 状态机合法 | `not_started → testing → blocked/fixing → passed` 之外一律报错 |
 | **PASS 是终态** | 已通过节点回到 `testing` 必须写 `reopen_reason: user_bug` 或 `code_change` |
-| **三重确认** | 通过节点必须有 tester / developer / lead 三者 `verdict: pass` 且记录 `who`、`t_exec` |
-| 证据可核 | 通过节点至少一条证据，且在 `manifest.json` 里 hash 一致（有 `--manifest` 时） |
+| **三重确认** | tester / developer / lead 的判定绑定同一 `attempt.id`。该轮记录 `attempt.build` 和 `attempt.sha256` |
+| 证据可核 | 证据文件需存在，SHA-256 需与测试自判时一致。指定 `--manifest` 后同时核对指定清单 |
 
 用 `status` 判断"是否整体通过"；用 `check` 判断"树本身是否合规"。
 
-**三重确认的写入（v4.2 起，写死）**：每次只写**一个角色**，且**工具只能写测试自判**。
+### 登记和复核
+
+步骤执行器登记测试自判时需要构建 ID，例如 Git 提交或发布包的哈希。可以用 `--build` 指定，也可以预先设置任务树顶层的 `build`。
+开发和 Lead 审阅测试结果后，各自用测试命令输出的轮次 ID 执行确认。
 
 ```powershell
-# 1) 测试自判：step_runner 通过后自动写入（--source tool 只能签 tester）
-python -B tools/verify/step_runner.py --backend playtest.json --steps n01.json --tree task-tree.json
-#    或手动：python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 `
-#            --role tester --verdict pass --who tester --evidence evidence/A1_s05.png
+# 1) 步骤通过且生成终态截图后，登记测试自判
+python -B tools/verify/step_runner.py --backend playtest.json --steps n01.json --tree task-tree.json --build BUILD_ID
+# 手动测试后也可以登记本轮截图
+# python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role tester --who tester --build BUILD_ID --evidence evidence/A1_s05.png
 
-# 2) 开发复核：必须是人的动作（工具执行会报错）
-python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role developer --verdict pass --who dev
+# 2) 开发审阅当轮截图和日志后确认
+python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role developer --who dev --attempt ATTEMPT_ID
 
-# 3) Lead 宣布：前置条件为 tester+developer 均已 pass 且节点有证据；这一步才把状态改成 passed
-python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role lead --verdict pass --who lead
+# 3) Lead 核对前两项确认并宣布通过
+python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role lead --who lead --attempt ATTEMPT_ID
 ```
 
-任一方 `--verdict reject` → 节点进入 `fixing`，不会前进。已通过的节点拒绝新判定，必须先：
+任一方拒绝时使用 `--verdict reject`，节点进入 `fixing`，当轮记录写入 `previous_attempts`。
+已通过节点需要复测时，由 Lead 先重开：
 
 ```powershell
 python -B tools/verify/task_tree.py reopen --tree task-tree.json --node A1 --reason user_bug --who lead
 ```
 
-> 因此**没有任何一条命令能把节点直接变成 passed**：测试跑通只产生"测试自判"，
-> 开发复核与 Lead 宣布各需一次人工调用，且 Lead 不能越过前两者，也不能在没有证据时宣布。
+重开会把旧证据和旧确认归档到 `previous_attempts`。新一轮使用新取证路径。以 `code_change` 为由重开时，
+如果旧轮次有构建 ID，新轮次需要不同的构建 ID。写入失败会返回非零退出码并保留原任务树。
+
+v4.2 与更早的任务树保留原格式。未重开过的旧判定可用于历史查询，校验会提示它缺少构建和复测绑定。
+正式验收可使用 `status --strict` 要求证据完整，相关旧节点可用 `reopen` 重新取证和确认。
+部署时可选用[角色权限策略](../references/standards/role-permissions.md)绑定实际进程账户。
 
 ## 2. 线路清单（覆盖应用使用的所有可能线路）
 

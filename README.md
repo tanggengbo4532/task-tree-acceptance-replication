@@ -12,9 +12,9 @@
 
 ## 核心组成
 
-- **四要素任务树**：每个节点 = 人（谁）/ 地点（在哪）/ 做到什么（事）/ 时间（节点唯一标识 `t_node`）；人读版用 Markdown，**规则用机器可读 JSON 校验**（`tools/verify/task_tree.py`：四要素齐全、`t_node` 唯一、只向前、状态机合法、PASS 终态、三重签名为 pass、证据 hash 一致）。
-- **四角色**：Lead（协调）/ 开发（白盒）/ 测试（黑盒）/ 记录（只读），权限隔离、禁止越权。
-- **三重确认**：测试自判 → 开发复核 → Lead 宣布，任一方未完成则继续。
+- **四要素任务树**：每个节点记录人、地点、要达到的状态和唯一标识 `t_node`。JSON 校验器检查任务树结构、状态迁移和验收记录。
+- **四角色**：Lead 协调、开发白盒修复、测试黑盒取证、记录归档。需要按操作系统账户限制判定写入时，见[角色权限部署](references/standards/role-permissions.md)。
+- **三重确认**：测试自判、开发复核和 Lead 宣布绑定同一构建、同一轮和同一组证据 SHA-256。重开保留旧记录，复测重新取证和确认。
 - **禁作弊红线**：只走用户可达的界面路径；禁止直接改状态/数据库/内部接口、跳过必经流程、自动判定成功、用调试模式取证。
 - **数据隔离**：用户数据（账号/数据库/配置/存档）只读；自动化只操作测试数据或临时实例；破坏性操作需显式目标与归属校验。
 - **双进度协议**：进度一=用户专用（只读）、进度二=团队专用（可覆盖），人机进度严格分离。
@@ -48,10 +48,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Force
 
 `-Force` 只会替换已有的本插件安装目录；目标不是本插件或包含源目录时安装会拒绝执行。
 
+## 五分钟体验
+
+安装 Python 3.8 或以上版本，并准备 Edge 或 Chrome。在插件目录运行：
+
+```powershell
+python -B examples/quickstart.py
+```
+
+示例用本地便签页面演示一次错误密码导致的验收失败，输出失败截图和日志位置，再用正确密码复测。
+复测通过后只有测试自判。脚本会验证 Lead 提前确认被拒绝，然后依次写入演示用的开发复核和 Lead 确认。
+任务树、取证文件和操作轨迹保存在命令打印的临时目录。接入真实项目时，请各角色阅读证据后执行自己的确认。
+完整命令和旧任务树迁移说明见[任务树模板](templates/task-tree.md)。
+
 ## 自检
 
 ```powershell
-python -B tools/verify/task_tree.py check --tree task-tree.json                  # 任务树规则校验
+python -B tools/verify/task_tree.py check --tree examples/task-tree.json         # 历史任务树示例
+python -B tools/verify/task_tree.py --selfcheck                                  # 判定、复测和权限回归
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Plugin.ps1    # 打包 + 安装 + Web 端到端
 powershell -NoProfile -ExecutionPolicy Bypass -File tests\Test-Backend.ps1   # Windows 后端真机（会开一个测试窗口）
 python -B tests/Test-WebBackend.py                                           # Web 后端真机（headless）
