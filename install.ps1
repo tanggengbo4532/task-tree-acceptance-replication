@@ -43,6 +43,7 @@ $required = @(
     "tools\verify\selftest.py",
     "templates\playtest.json",
     "templates\node-metrics.csv",
+    "templates\design-experience.md",
     "references\roles\lead.md",
     "references\standards\no-cheat.md",
     "references\standards\role-permissions.md",

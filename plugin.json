@@ -1,8 +1,8 @@
 {
   "name": "game-playtest",
-  "version": "4.3.0",
+  "version": "4.4.0",
   "schema": 4,
-  "description": "四角色黑盒验收框架，包含任务树、存档锚点、用户与团队双进度、Windows 和 Web 后端。测试自判绑定构建、复测轮次和证据 SHA-256，开发和 Lead 分别确认指定轮次。拒绝或重开会归档旧判定，后续复测重新取证。可选角色策略将判定写入绑定到操作系统账户。",
+  "description": "Four-agent black-box acceptance using task trees, starting anchors, separate user and team progress, and Windows and Web backends. Build- and attempt-bound evidence supports three-role acceptance, optional checkpoint captures, and reuse of user-accepted designs.",
   "entry": "SKILL.md",
   "skills": [
     "SKILL.md"
@@ -157,6 +157,7 @@
     "templates/task-tree.md",
     "templates/task-tree.json",
     "templates/experience-log.md",
+    "templates/design-experience.md",
     "templates/bug-ledger.md",
     "templates/recorder-log.md",
     "templates/report-template.md",
@@ -226,7 +227,8 @@
     "python -B tests/Test-WebBackend.py",
     "powershell -NoProfile -File install.ps1 -DryRun",
     "powershell -NoProfile -ExecutionPolicy Bypass -File tests/Test-Plugin.ps1",
-    "powershell -NoProfile -ExecutionPolicy Bypass -File tests/Test-Backend.ps1"
+    "powershell -NoProfile -ExecutionPolicy Bypass -File tests/Test-Backend.ps1",
+    "python -B tests/Test-AcceptanceDesign.py"
   ],
   "keywords": [
     "qa",

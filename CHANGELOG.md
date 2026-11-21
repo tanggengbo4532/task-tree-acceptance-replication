@@ -1,19 +1,24 @@
+# Game Playtest changelog
 
+Versions match `plugin.json`.
 
-- 恢复完整 `templates/task-tree.md`（A1~A12 主线 + A59~A62 回归映射 + 节点验收）；
-- 验证自动化（锚点/walker/run_verify/test-fast 契约）保留为「任务树 + 锚点断言」。
+## v4.4.0
 
-# CHANGELOG · game-playtest 插件
+- A node can require evidence at intermediate steps. The runner records the start, listed checkpoints, and end in one attempt. Tester, Developer, and Lead still review that attempt in order.
+- Explicitly user-accepted designs can be preserved in a project-level design experience log. Future repair and design assignments consult the log and verify any reused approach at the current node.
+- The architecture, role prompts, backend contract, and workflow templates are available in English.
 
-> 版本号与 `plugin.json` 保持一致。本文件记录对外可见的变化（框架/角色/标准/模板/工具）。
+## v4.3.0
 
-## v4.3.0 · 构建、复测与证据绑定
+- Bind Tester, Developer, and Lead decisions to a build ID, attempt ID, and evidence SHA-256.
+- Archive rejected and reopened attempts. Require fresh evidence after reopening and a new build ID after a code-change reopen.
+- Guard concurrent verdict writes and refuse publication if the target node changed during testing.
+- Optionally bind verdict writers to OS principals with [role permissions](references/standards/role-permissions.md).
+- Add the local Web quickstart.
 
-- 测试通过时记录构建 ID、复测 ID 和证据 SHA-256。开发与 Lead 使用 `--attempt` 确认已经审阅的复测轮次。
-- 重开和拒绝会归档当前判定。因代码变更重开时，新测试需要新构建 ID。证据缺失、被改写或属于旧轮次时，判定写入失败。
-- 步骤执行器和任务树命令共用加锁写入。执行期间节点发生变更时，执行器保留取证结果供查看，并拒绝登记过期判定。
-- 可选 `role_policy` 将判定权限绑定到 Windows SID 或 POSIX UID。启用方式见[角色权限部署](references/standards/role-permissions.md)。
-- 新增 `python -B examples/quickstart.py`，演示 Web 失败取证、复测和确认。
+## Historical release notes
+
+The original notes for v4.2 and earlier follow in Chinese.
 
 ## v4.2.0（2026-11-14）· 三重确认可写入，但不可被自动化替代
 

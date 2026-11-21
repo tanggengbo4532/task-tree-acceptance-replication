@@ -1,163 +1,77 @@
-# 任务树（四要素架构：人 / 地点 / 做到什么 / 时间）
+# Four-element task tree
 
-> 一个**节点** = 一次可独立验收的最小闭环，只用四要素描述：
-> **人（谁）→ 地点（在哪）→ 做到什么（做完进入下一地点/状态）→ 时间（节点标识）**。
-> 顶 = 起点，叶子 = 各线路终点；节点顺序 = 应用内前进方向（写死）：每节点起点 = 上一节点终点，
-> 测试只向前推进；**禁止回头路验收**。防回归节点单独标注、只做一次。
-> 状态机：`未开始 → 测试中 → 阻塞 → 修复中 → 已通过（存档）`；全部节点通过 = 整体通过。
-> 纪律：本节点没过不跳步；同一/同类问题第 2 次出现 → 开发从设计层修复；禁止合成触发/强制落点/传送验收。
+A node is the smallest unit that can be accepted independently. Map main, secondary, and exceptional routes. Later nodes start at the result of earlier nodes. Record finer-grained checks in the evidence notes.
 
-## 1. 四要素定义（引擎无关）
+| Element | JSON field | Meaning |
+| --- | --- | --- |
+| Who | `who` | Recognizable actor or relevant interactive entity. |
+| Where | `where` | Reachable page, route, scene, or control with an identifiable entry point. |
+| What | `action` | Ordinary input and the observable result or transition. |
+| When | `t_node` | Unique ordered logical ID. Use ISO 8601 `t_exec` for execution and evidence timestamps. |
 
-| 要素 | 含义 | 判定标准 |
-|---|---|---|
-| **人（谁）** | 操作主体：玩家/用户，或必须交互的关键对象（NPC/控件/服务） | 可辨认；对象有真实 id/定位 |
-| **地点（在哪）** | 当前界面/场景/关卡 + 入口（坐标/控件/路径） | 真实可到达；坐标/路径可定位 |
-| **做到什么（事）** | 真实输入/操作 → 系统响应 → 进入下一地点或状态 | 完成后下一节点可达；不靠传送/跳步/合成状态 |
-| **时间（节点标识）** | 该节点的**唯一标识与排序依据**（v3.4.0 新增） | 有 `t_node` 逻辑时间且全树唯一/单调；`t_exec` 可回溯 |
+Keep the ID on retry. Refer to `t_node#retryN` in reports, anchor records, and evidence. Use physical timestamps to align files. Use `requires` only for earlier nodes.
 
-### 1.1 时间要素规范（双时间，写死）
+## Validate and record
 
-- **`t_node`（逻辑时间，主标识）**：单调递增的节点序号/阶段编号，如 `C5-N12`、`step=0012`、`v3-A1`。
-  - 作用：唯一标识、任务树排序、复测区分、离线复现定位；
-  - 一旦分配不随执行时间改变；同一节点复测用 `t_node#retry2`（ID 不变，不新建节点）。
-- **`t_exec`（物理时间，元数据）**：实际执行/取证时间戳（ISO-8601，含时区），如 `2026-11-05T17:20:31+08:00`。
-  - 作用：对齐日志/截图/存档/报告时间线；不单独用作主键（同秒多节点、时钟漂移、复测冲突）。
-- **排序规则**：任务树按 `t_node` 排序；节点顺序=前进方向；**只向前**。
-- **引用规则**：报告/证据/锚点台账/任务树快照统一用 `t_node` 引用；`t_exec` 写在证据侧。
-
-**读法**：一行一个节点；做完“事”即进入下一行“地点”。实现细节（内部函数/缓存/脚本 op/调试钩子）不进主线表。
-
-## 1.2 机器可读版本（v4.0 起，与本文档并存）
-
-上表是人读视图；**规则由机器校验**的是同内容的 JSON 版（模板 `templates/task-tree.json`，
-示例 `examples/task-tree.json`）：
+Use [task-tree.json](task-tree.json) or the [example](../examples/task-tree.json).
 
 ```powershell
-python -B tools/verify/task_tree.py check  --tree task-tree.json --root . --manifest evidence/manifest.json
-python -B tools/verify/task_tree.py status --tree task-tree.json     # 是否整体通过
+python -B tools/verify/task_tree.py check --tree task-tree.json
+python -B tools/verify/task_tree.py status --tree task-tree.json --strict
 ```
 
-`check` 强制以下规则（不通过即非 0，不可"口头通过"）：
+`check` validates structure, node ordering, transitions, and evidence. `status` also checks whether all declared nodes passed. Use `--manifest evidence/manifest.json` to verify against an evidence manifest. The normal states are `not_started`, `testing`, `blocked`, `fixing`, and `passed`.
 
-| 规则 | 说明 |
-|---|---|
-| 四要素齐全 | `who/where/action/t_node` 全部非空 |
-| `t_node` 全树唯一 | 复测不改 id，写进 `retries` |
-| 只向前 | `requires` 只能指向**更早**的节点（同时排除环） |
-| 状态机合法 | `not_started → testing → blocked/fixing → passed` 之外一律报错 |
-| **PASS 是终态** | 已通过节点回到 `testing` 必须写 `reopen_reason: user_bug` 或 `code_change` |
-| **三重确认** | tester / developer / lead 的判定绑定同一 `attempt.id`。该轮记录 `attempt.build` 和 `attempt.sha256` |
-| 证据可核 | 证据文件需存在，SHA-256 需与测试自判时一致。指定 `--manifest` 后同时核对指定清单 |
-
-用 `status` 判断"是否整体通过"；用 `check` 判断"树本身是否合规"。
-
-### 登记和复核
-
-步骤执行器登记测试自判时需要构建 ID，例如 Git 提交或发布包的哈希。可以用 `--build` 指定，也可以预先设置任务树顶层的 `build`。
-开发和 Lead 审阅测试结果后，各自用测试命令输出的轮次 ID 执行确认。
+The Tester records a build ID (from `--build` or the top-level `build`) and evidence files. The tool stores their SHA-256 in the attempt. Developer and Lead confirm the same attempt after reading its evidence.
 
 ```powershell
-# 1) 步骤通过且生成终态截图后，登记测试自判
+# Using the step runner after a normal start
 python -B tools/verify/step_runner.py --backend playtest.json --steps n01.json --tree task-tree.json --build BUILD_ID
-# 手动测试后也可以登记本轮截图
-# python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role tester --who tester --build BUILD_ID --evidence evidence/A1_s05.png
 
-# 2) 开发审阅当轮截图和日志后确认
+# For a manually executed node without required checkpoints
+python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role tester --who tester --build BUILD_ID --evidence evidence/A1_s05.png
+
+# After reviewing the selected attempt
 python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role developer --who dev --attempt ATTEMPT_ID
-
-# 3) Lead 核对前两项确认并宣布通过
 python -B tools/verify/task_tree.py record --tree task-tree.json --node A1 --role lead --who lead --attempt ATTEMPT_ID
 ```
 
-任一方拒绝时使用 `--verdict reject`，节点进入 `fixing`，当轮记录写入 `previous_attempts`。
-已通过节点需要复测时，由 Lead 先重开：
+`--verdict reject` sends the node to `fixing` and archives the attempt. Reopen an accepted node for a new user defect or an implementation change to that node.
 
 ```powershell
 python -B tools/verify/task_tree.py reopen --tree task-tree.json --node A1 --reason user_bug --who lead
 ```
 
-重开会把旧证据和旧确认归档到 `previous_attempts`。新一轮使用新取证路径。以 `code_change` 为由重开时，
-如果旧轮次有构建 ID，新轮次需要不同的构建 ID。写入失败会返回非零退出码并保留原任务树。
+Reopening leaves other verdicts in place. Capture fresh evidence for the reopened node. A `code_change` reopen requires a build ID different from the previous recorded build. Failed writes preserve the tree. Legacy v4.2 and earlier records can be read as history. Strict status requires a current attempt and build binding. Use [role permissions](../references/standards/role-permissions.md) when deployment binds writes to OS identities.
 
-v4.2 与更早的任务树保留原格式。未重开过的旧判定可用于历史查询，校验会提示它缺少构建和复测绑定。
-正式验收可使用 `status --strict` 要求证据完整，相关旧节点可用 `reopen` 重新取证和确认。
-部署时可选用[角色权限策略](../references/standards/role-permissions.md)绑定实际进程账户。
+## Optional checkpoint evidence
 
-## 2. 线路清单（覆盖应用使用的所有可能线路）
+Set `"checkpoints": [2, 4]` on the node to capture after steps two and four. Use increasing one-based step numbers before the final step. Each listed step must have an observable `expect` in the steps file.
 
-| 线路 | 类型 | 覆盖范围 | 节点数 |
-|---|---|---|---|
-| A | 主流程 | 正常用户的标准操作路径 | |
-| B | 次要流程 | 可选功能、分支操作 | |
-| C | 异常路径 | 错操作、边界输入、中断恢复 | |
+Load the starting state and run `step_runner.py --tree`. The start, checkpoints, and end must all be captured from one attempt. The paths are recorded in `attempt.checkpoint_evidence`. Missing required captures prevent the Tester verdict. The Developer and Lead review the same attempt.
 
-## 3. 节点表（四要素）
+## Human-readable records
 
-| 编号（=t_node） | 线路 | 人（谁） | 地点（在哪） | 做到什么（事） | 时间标识 t_node | t_exec（执行时间） | 前置 | 存档锚点 | 状态 |
-|---|---|---|---|---|---|---|---|---|---|
-| 0 | — | 用户 | 启动入口/主界面 | 应用可启动进入主界面 | `N0` | 2026-01-01T00:00:00+08:00 | — | save/start | 已通过 |
-| A1 | A | | | 真实操作 → 进入下一地点/状态 | `A1`（或 `C1-N01`） | | 0 | | 未开始 |
-| A1.1 | A | | | | `A1.1` | | A1 | | 未开始 |
-| B1 | B | | | | `B1` | | A1 | | 未开始 |
-| C1 | C | | | | `C1` | | A1 | | 未开始 |
+| Route | Type | Scope |
+| --- | --- | --- |
+| A | Main | Standard user path |
+| B | Secondary | Optional behavior |
+| C | Exceptional | Invalid input, boundary, or recovery |
 
-> 验收标准由“地点 + 事”直接推导：在指定地点完成指定真实操作，并到达下一地点/状态。
-> 时间列必须填写：`编号`与`t_node`建议一致；复测只写 `t_node#retryN`，不新增行。
-> 需要更细的断言（提示原文/数值/截图）写在证据/验收备注，不污染四要素列。
+| ID | Route | Who | Where | What | Executed at | Requires | Anchor | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A1 | A | User | Start page | Reach the home screen with normal input | | | | Not started |
 
-## 4. 状态迁移记录（每轮追加）
+| Round | Node | Transition | `t_exec` | Evidence |
+| --- | --- | --- | --- | --- |
+| | | | | |
 
-| 轮次 | 节点（t_node） | 从 → 到 | t_exec | 证据（截图/日志/报告编号） |
-|---|---|---|---|---|
-| r1 | A1 | 未开始 → 测试中 | | |
+| Node or retry | Anchor path | Created by normal use or synthetic | Notes |
+| --- | --- | --- | --- |
+| | | | |
 
-## 5. 存档锚点登记
+| Node | Blockage or ledger ID | Blocking? | Tester suggestion | Developer response |
+| --- | --- | --- | --- | --- |
+| | | | | |
 
-> 存档必须是正常使用产生的状态；合成数据造的档标注「合成」，其结论单独定性。
-> 锚点与节点用 `t_node` 关联（如 `A1/retry2`）。
-
-| 节点（t_node） | 存档位置/快照 | 产生方式 | 备注 |
-|---|---|---|---|
-| | | 正常 / 合成 | |
-
-## 6. 阻塞与修复挂账
-
-| 节点（t_node） | 阻塞问题（台账#） | 阻断? | 测试建议 | 开发处理（含同类第 2 次的设计层修复） |
-|---|---|---|---|---|
-| | | 阻断/非阻断 | | |
-
-## 7. 节点粒度审查记录（每完成一个节点后由开发填写）
-
-> 判定标准：一个节点 = 一次可独立验收的最小闭环。混了多类验收=过粗；依赖/锚点缺失=不可达；合并后仍可独立判定=可合并。
-> **四要素审查**：人/地点/事/时间任一含糊（“在某处做某事”不可定位、`t_node` 不唯一/乱序）→ 节点不合格。
-
-| 完成节点（t_node） | 粒度判定（保持/拆分/合并/调依赖） | 四要素是否清晰 | 理由 | 调整后受影响节点 | 生效版本 |
-|---|---|---|---|---|---|
-| | | 是/否 | | | v3.4 |
-
-## 8. 结构化任务树快照（文本，每完成一个节点后追加一版）
-
-> 记录里必须能看到“每次任务完成后”的任务树结构；缩进文本即可，不要求图。
-> 标记建议：`[通过]` / `[测试中]` / `[阻塞]` / `[未开始]` / `[修复中]`；每行前缀 `t_node`，末尾可跟四要素摘要。
-
-```text
-v1（初始）
-N0 用户/启动入口/应用可启动到主界面/2026-01-01T00:00+08:00 [未开始]
-├─ A 主流程
-│  ├─ A1 谁/在哪/做到什么/2026-01-01T10:00+08:00 [未开始]
-│  └─ A2 谁/在哪/做到什么/2026-01-01T11:00+08:00 [未开始]
-├─ B 次要流程
-│  └─ B1 [未开始]
-└─ C 异常路径
-   └─ C1 [未开始]
-```
-
-## 9. 重复问题与设计层修复登记
-
-> 同一/同类问题第 2 次出现时在此登记：问题、两次证据、设计层结论、改动层、ARCH_REVIEW 位置、回归结果。
-> 两次证据用 `t_node#retryN` 区分。
-
-| 轮次 | 问题（台账#） | 出现次数 | 两次证据（t_node#retryN） | 设计层/架构层结论 | 改动位置 | 回归结果 |
-|---|---|---|---|---|---|---|
-| | | 第 1 / 第 2 次 | | | | |
+After a node, review granularity and record any split, merge, or prerequisite change with its reason. Archive a versioned main-route snapshot. On the second recurring failure, retain both attempt references, the design-level diagnosis, `ARCH_REVIEW`, and the result of verification.

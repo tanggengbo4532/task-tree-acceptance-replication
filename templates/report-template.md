@@ -1,64 +1,20 @@
-# 测试报告 · <日期/轮次>
+# Tester report
 
-> 测试 agent 单节点报告模板（通用应用版）。
+- Node, route, build, and attempt:
+- `t_node` and ISO 8601 `t_exec`:
+- Self-verdict (pass, fail, or blocked):
+- Last verified state and reason for stopping:
+- Starting anchor, load count, and current team progress:
+- Experience entries used:
 
-## 结论
+| Acceptance item | Expected and observed | Evidence | Result |
+| --- | --- | --- | --- |
+| | | | |
 
-- 节点（t_node）：<编号 / 名称 / 所属线路>
-- 时间标识：t_node=<…>；t_exec=<ISO-8601 含时区>
-- 节点任务：完成 / 未完成
-- 最远推进：<界面/位置 + 引导文案原文>
-- 终止原因：<看不懂 / 推不动 / 断点 / 崩溃 / 时间到；完成则写"无">
+## Issues
 
-## 经验复用
+For each issue, record severity, location, reproducible inputs, expected and actual results, visible text, screenshot, and recent actions. Separate suggestions from findings. Describe the proposed change, reason, and expected effect.
 
-- 复用的成功经验：<EXPERIENCE.md 的 S*，怎么用的>
-- 避开的踩坑经验：<EXPERIENCE.md 的 F*，本轮怎么绕开的>
+## Evidence and experience
 
-## 验收标准达成情况
-
-- [ ] <验收标准 1>
-- [ ] <验收标准 2>
-
-## 问题清单（按严重度）
-
-### P0 <标题>
-
-- 位置：界面 / 屏幕坐标 / 数据位置
-- 复现步骤：
-  1. …
-  2. …
-- 期望：
-- 实际：
-- 最后操作序列：
-- 截图：`<文件名>`
-
-## 引导文案逐条
-
-| 界面 | 引导/提示文案原文 | 是否清楚 | 问题 |
-|---|---|---|---|
-|  |  |  |  |
-
-## 其他问题
-
-- UI 遮挡/重叠：
-- 显示异常：
-- 输入/焦点：
-- 性能/卡顿：
-
-## 改进建议（与问题分开）
-
-> 面向体验与设计，开发会综合建议决定是否采纳；写清"改成什么 + 为什么 + 预期效果"。
-
-1. <建议 1>
-2. <建议 2>
-
-## 截图目录
-
-`<路径>`
-
-## 本轮经验沉淀
-
-- 新增成功经验 S*：…
-- 新增踩坑经验 F*：…
-- 同类失败第 2 次（R*）：<相似点/差异/分析/给开发的建议；无则写"无">
+Record evidence directory, checkpoint captures where required, updated S/F/R entries, and any untested conditions or known caveats. Give the Lead the concrete next action.

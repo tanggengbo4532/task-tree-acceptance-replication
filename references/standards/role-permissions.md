@@ -1,31 +1,23 @@
-# 角色权限部署
+# Deploy role permissions
 
-默认的角色提示词用于协作分工。启用 `role_policy` 后，`task_tree.py` 和带 `--tree` 的步骤执行器会在写入前检查当前进程的操作系统身份。步骤执行器也会在开始操作界面前确认测试身份。`--who` 是显示名称，审计记录会另外保存已验证的账户标识。
+Role prompts assign responsibilities. With `role_policy` enabled, `task_tree.py` and the step runner with `--tree` check the OS identity before writing a verdict. The runner also checks Tester identity before operating the UI. `--who` is a display label. The audit record stores the verified principal separately.
 
-## 配置判定权
-
-1. 在宿主为 Tester、Developer 和 Lead 准备三个不同的进程账户。Windows 使用 `whoami /user` 查看 SID。macOS 或 Linux 使用 `id -u` 查看 UID，并在配置中加 `uid:` 前缀。
-2. 将映射保存在宿主管理的 JSON 文件中。下面是 POSIX 示例。
+1. Allocate three distinct OS principals for Tester, Developer, and Lead. Use `whoami /user` on Windows to obtain the SID. On POSIX use `id -u` with a `uid:` prefix.
+2. Store the mapping in a host-managed JSON file.
 
    ```json
-   {
-     "tester": "uid:1011",
-     "developer": "uid:1012",
-     "lead": "uid:1013"
-   }
+   {"tester": "uid:1011", "developer": "uid:1012", "lead": "uid:1013"}
    ```
 
-3. 在任务树顶层设置 `"role_policy": "路径/role-policy.json"`。相对路径以任务树目录为准。运行宿主应保护映射、任务树配置和判定代码，并只开放受控的写入入口。重开由 Lead 账户执行。Recorder 使用只读入口。
+3. Set `"role_policy": "role-policy.json"` at the root of the task tree. Relative paths resolve from the tree directory. Protect the policy, tree configuration, and verifier. Limit writes to the controlled entry points. The Lead account reopens nodes. The Recorder reads evidence and writes a separate archive.
 
-启用策略后，进行中的验收判定需要由这些账户重新取得。旧签字保留在历史记录中。
+Enabling the policy requires fresh confirmations for active attempts. Historical signatures remain in the records.
 
-## 在宿主限制工具和文件
+| Role | Host access |
+| --- | --- |
+| Tester | Isolated test instance, assigned node, starting anchor, and current-round evidence writes. |
+| Developer | Source, test evidence, diagnostic tools, and reviewer entry point. |
+| Lead | Tasks, evidence, confirmation, and reopen entry points. |
+| Recorder | Read-only acceptance materials and a separate writable archive. |
 
-| 角色 | 需要的访问 |
-|---|---|
-| Tester | 测试实例的界面工具、任务和起始锚点、写入当轮证据 |
-| Developer | 源码、测试证据、用于开发的诊断工具、复核入口 |
-| Lead | 已声明的任务和证据、确认与重开入口 |
-| Recorder | 只读读取验收材料、写入单独的归档目录 |
-
-给 Tester 配置独立的测试实例和测试数据目录，并限制其可调用的工具及配置路径。任务树与证据清单应通过宿主控制的入口写入。若智能体共享同一系统账户，宿主需要用工具沙箱、独立执行身份或受控审批入口提供隔离。直接拥有文件写权限的进程可以编辑 JSON，宿主需要限制对任务树的任意写入。
+Restrict the Tester to test data and approved tools. Shared OS accounts require host isolation through tool sandboxing, separate execution identities, or a controlled write entry point. A process that can edit the tree directly can bypass the command-line checks.

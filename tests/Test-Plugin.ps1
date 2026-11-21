@@ -90,8 +90,10 @@ Check "install to temp dir + verify" {
                   "tools\probes\walkprobe.py", "tools\probes\holdprobe.py", "tools\probes\fps_probe.py",
                   "tools\evidence\manifest.py", "tools\metrics\dsh_metrics.py", "tools\tests\selftest.py",
                   "tools\verify\task_tree.py", "tools\verify\role_policy.py", "examples\quickstart.py",
+                  "tests\Test-AcceptanceDesign.py",
                   "tests\fixtures\webapp\index.html",
                   "templates\playtest.json", "templates\node-metrics.csv", "templates\evidence-index.md",
+                  "templates\design-experience.md",
                   "references\roles\lead.md", "references\standards\no-cheat.md",
                   "references\testing\playbook.md", "CHANGELOG.md", "examples\generic-desktop.json")
         foreach ($rel in $must) {
@@ -121,6 +123,11 @@ if (-not $SkipPython) {
         if ($LASTEXITCODE -ne 0) { throw ("selftest exit " + $LASTEXITCODE) }
         Remove-Item Env:\PYTHONDONTWRITEBYTECODE -ErrorAction SilentlyContinue
         Write-Output "      python tools/tests/selftest.py PASS"
+    }
+
+    Check "acceptance workflow (offline)" {
+        & python -B (Join-Path $root "tests\Test-AcceptanceDesign.py") --offline
+        if ($LASTEXITCODE -ne 0) { throw ("Test-AcceptanceDesign exit " + $LASTEXITCODE) }
     }
 }
 

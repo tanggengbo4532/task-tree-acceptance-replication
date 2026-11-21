@@ -12,7 +12,7 @@
   "input": {
     "method": "postmessage"
   },
-  "shot_dir": "C:\\QA\\shots\round1",
+  "shot_dir": "C:\\QA\\shots\\round1",
   "capture": {
     "method": "auto",
     "dpi_aware": true,
@@ -40,7 +40,7 @@
     "state_text_limit": 4000
   },
   "evidence": {
-    "dir": "C:\\QA\\evidence\round1",
+    "dir": "C:\\QA\\evidence\\round1",
     "manifest": "manifest.json",
     "append_only": true
   },
@@ -49,12 +49,12 @@
     "window": null
   },
   "notes": {
-    "backend": "windows | web | backend_path=<adapter>; 注册见 plugin.json backends",
-    "locator": "title_pattern / process_name 至少填一个：缺省时后端拒绝工作，绝不匹配任意窗口",
-    "single_instance_rule": "同一时刻只允许一个被测实例；测前关残留实例并保留 pid",
-    "input_method": "postmessage=窗口消息（不抢光标，Raw Input 应用可能收不到）；sendinput=真实全局输入（目标必须前台）",
-    "screenshot_method": "auto=PrintWindow 优先，空白回退屏幕拷贝；同名截图自动加后缀不覆盖",
-    "debug_keys": "调试快捷键只许开发自查，不得写进测试用例/验收证据",
-    "schema": "v3；旧 v1 字段（hint_region/shot_dir）与 v2 字段（keys.allow_postmessage）仍兼容"
+    "backend": "Choose windows or web, or specify backend_path for a custom adapter. See plugin.json.",
+    "locator": "Set title_pattern or process_name for Windows. Ambiguous or missing targets are refused.",
+    "single_instance_rule": "Use one target instance. Close stale instances and record the target process ID.",
+    "input_method": "postmessage sends window messages and may be ignored by Raw Input apps. sendinput requires the target to be foreground.",
+    "screenshot_method": "auto prefers PrintWindow and falls back to screen copy for blank captures. Existing screenshots are preserved.",
+    "debug_keys": "Developer diagnostics only. Keep debug input out of acceptance cases and evidence.",
+    "schema": "v3. Legacy hint_region, shot_dir, and keys.allow_postmessage are supported."
   }
 }

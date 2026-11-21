@@ -6,6 +6,9 @@ Every step is "one real input -> one observable response". After the input the r
 the backend until the step's expectations hold or the timeout expires (bounded waiting), so a
 swallowed click, a page that never loads or a wrong screen is a FAILURE, never a silent pass.
 
+For task-tree nodes with checkpoints, load the starting state before invoking the runner
+with --tree. The runner captures the start, the designated steps, and the final state.
+
 Usage:
   python step_runner.py --backend playtest.json --steps node-N03.json [--jsonl trace.jsonl] [--out DIR]
   python step_runner.py --selfcheck
@@ -171,10 +174,22 @@ def validate(spec):
             raise Abort('step %d: wait needs value = milliseconds' % i)
 
 
-def run(backend, spec, jsonl='', out_dir=''):
+def capture_screenshot(backend, name):
+    path = backend.shot(name)
+    if not path or not os.path.isfile(path):
+        raise BackendError('screenshot backend did not return a file: %s' % path)
+    return path
+
+
+def run(backend, spec, jsonl='', out_dir='', checkpoints=()):
     """Run all steps. Returns (rc, summary dict)."""
     try:
         validate(spec)
+        for number in checkpoints:
+            if not 0 < number < len(spec['steps']):
+                raise Abort('checkpoint %d must precede the final step' % number)
+            if not spec['steps'][number - 1].get('expect'):
+                raise Abort('checkpoint %d needs an explicit expectation' % number)
     except Abort as e:
         return RC_CONFIG, {'ok': False, 'error': str(e)}
     node = str(spec.get('node') or 'node')
@@ -189,6 +204,13 @@ def run(backend, spec, jsonl='', out_dir=''):
             summary['snapshot'] = _snapshot(backend, node, step_no, step, reasons, done, last, out_dir)
         _append(jsonl, dict(summary, record='summary'))
         return rc, summary
+
+    if checkpoints:
+        try:
+            path = capture_screenshot(backend, '%s_entry' % node)
+        except Exception as e:
+            return fail(RC_FAIL, 0, {'do': 'capture_start'}, ['missing starting screenshot: %s' % e])
+        summary.update(evidence=[path], checkpoint_evidence=[{'step': 0, 'path': path}])
 
     for i, step in enumerate(spec['steps'], 1):
         action, value = step['do'], str(step.get('value', ''))
@@ -241,18 +263,23 @@ def run(backend, spec, jsonl='', out_dir=''):
             _append(jsonl, rec)
             return fail(RC_FAIL, i, step, reasons, now)
         rec['ok'] = True
-        if step.get('shot') or i == len(spec['steps']):
-            # last step always keeps a frame: a passed node needs evidence
+        final_step = i == len(spec['steps'])
+        required_shot = checkpoints and (i in checkpoints or final_step)
+        if step.get('shot') or final_step or required_shot:
             try:
-                shot = backend.shot('%s_s%02d' % (node, i))
-                if not shot or not os.path.isfile(shot):
-                    raise BackendError('screenshot backend did not return a file: %s' % shot)
+                shot = capture_screenshot(backend, '%s_s%02d' % (node, i))
                 rec['shot'] = shot
                 summary.setdefault('evidence', []).append(rec['shot'])
-                if i == len(spec['steps']):
+                if final_step:
                     summary['final_evidence'] = rec['shot']
+                if required_shot:
+                    summary['checkpoint_evidence'].append({'step': i, 'path': shot})
             except Exception as e:
                 rec['shot_error'] = str(e)
+                if required_shot:
+                    rec['ok'] = False
+                    _append(jsonl, rec)
+                    return fail(RC_FAIL, i, step, ['missing required screenshot: %s' % e], now)
         _append(jsonl, rec)
         done.append({'step': i, 'do': action, 'value': value, 'ts': rec['ts']})
         summary['steps_passed'] = i
@@ -361,12 +388,14 @@ def main():
         backend = load_backend(a.backend)
         with open(a.steps, encoding='utf-8-sig') as f:
             spec = json.load(f)
+        validate(spec)
     except ConfigError as e:
         print('[step_runner] config error: %s' % e, file=sys.stderr)
         return RC_CONFIG
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, Abort) as e:
         print('[step_runner] cannot read steps file: %s' % e, file=sys.stderr)
         return RC_CONFIG
+    checkpoints = ()
     if a.tree:
         import task_tree
         a.tree = os.path.realpath(a.tree)
@@ -380,21 +409,25 @@ def main():
             if not isinstance(build, str) or not build.strip():
                 raise task_tree.Refused('--tree requires --build or a build ID in the task tree')
             test_context = (node, tree.get('build'), tree.get('role_policy'))
+            checkpoints = task_tree.node_checkpoints(node)
         except (OSError, ValueError, task_tree.Refused) as e:
             print('[step_runner] could not start a tester attempt: %s' % e, file=sys.stderr)
             return RC_CONFIG
-    rc, summary = run(backend, spec, a.jsonl, a.out)
+    rc, summary = run(backend, spec, a.jsonl, a.out, checkpoints=checkpoints)
     message = ''
     if a.tree and rc == RC_OK:
         try:
             if not summary.get('final_evidence'):
                 raise task_tree.Refused('final screenshot was not captured')
             evidence = [os.path.abspath(path) for path in summary['evidence']]
+            frames = [{'step': frame['step'], 'path': os.path.abspath(frame['path'])}
+                      for frame in summary.get('checkpoint_evidence', [])]
 
             def record(tree, root, manifest, principal):
                 return task_tree.record(tree, summary['node'], 'tester', 'pass', a.who, evidence,
                                         source='tool', build=build, root=root, manifest=manifest,
-                                        principal=principal)
+                                        principal=principal, checkpoint_evidence=frames,
+                                        steps_passed=summary['steps_passed'])
 
             message, _ = task_tree.edit_tree(a.tree, summary['node'], 'tester', a.who, record,
                                              test_context=test_context)

@@ -142,6 +142,32 @@ def evidence_hash(root, path, manifest):
     return digest
 
 
+def node_checkpoints(node):
+    checkpoints = node.get('checkpoints', [])
+    if (not isinstance(checkpoints, list)
+            or any(type(step) is not int or step < 1 for step in checkpoints)
+            or checkpoints != sorted(set(checkpoints))):
+        raise Refused('checkpoints must be a list of increasing positive step numbers')
+    return checkpoints
+
+
+def check_checkpoint_evidence(checkpoints, attempt, root):
+    steps = attempt.get('steps_passed')
+    frames = attempt.get('checkpoint_evidence')
+    if (type(steps) is not int or steps <= checkpoints[-1] or not isinstance(frames, list)
+            or any(not isinstance(frame, dict) or type(frame.get('step')) is not int for frame in frames)
+            or [frame['step'] for frame in frames] != [0, *checkpoints, steps]):
+        raise Refused('required checkpoint evidence must include the start, each checkpoint, and the final step')
+    paths = []
+    for frame in frames:
+        path = frame.get('path')
+        if not isinstance(path, str) or path not in attempt['sha256']:
+            raise Refused('each required checkpoint screenshot must belong to this attempt')
+        paths.append(os.path.normcase(evidence_path(root, path)))
+    if len(set(paths)) != len(paths):
+        raise Refused('the start, checkpoints, and final step require distinct screenshot files')
+
+
 def validate(tree, root='.', manifest=None, evidence_node=None):
     """Return (problems, summary). problems is a list of Problem."""
     p = []
@@ -203,7 +229,7 @@ def validate(tree, root='.', manifest=None, evidence_node=None):
         if tn:
             path = 'node %s' % tn
 
-        for key, label in (('who', '人'), ('where', '地点'), ('action', '做到什么')):
+        for key, label in (('who', 'actor'), ('where', 'location'), ('action', 'observable outcome')):
             if not _nonempty(n.get(key)):
                 err(path, 'four elements: missing "%s" (%s)' % (key, label))
         if not _nonempty(n.get('line')):
@@ -214,6 +240,12 @@ def validate(tree, root='.', manifest=None, evidence_node=None):
         st = n.get('state', 'not_started')
         if st not in STATES:
             err(path, 'state must be one of %s (got %r)' % ('/'.join(STATES), st))
+
+        try:
+            checkpoints = node_checkpoints(n)
+        except Refused as e:
+            err(path, str(e))
+            checkpoints = []
 
         # forward-only: requires must point at nodes that appear earlier
         for req in n.get('requires') or []:
@@ -267,6 +299,11 @@ def validate(tree, root='.', manifest=None, evidence_node=None):
             if not isinstance(hashes, dict) or not ev or hashes.keys() != set(ev):
                 err(path, 'the attempt must bind every evidence file to its SHA-256')
                 continue
+            if checkpoints:
+                try:
+                    check_checkpoint_evidence(checkpoints, attempt, root)
+                except Refused as e:
+                    err(path, str(e))
             for role, confirmation in conf.items():
                 if not isinstance(confirmation, dict) or confirmation.get('attempt_id') != attempt['id']:
                     err(path, 'confirmation "%s" belongs to a different attempt' % role)
@@ -278,6 +315,8 @@ def validate(tree, root='.', manifest=None, evidence_node=None):
                     except (OSError, Refused) as e:
                         err(path, str(e))
         elif st == 'passed':
+            if checkpoints:
+                err(path, 'required checkpoint evidence needs a current tester attempt')
             warn(path, 'legacy pass without a build or attempt binding (reopen to obtain a current pass)')
             if any(isinstance(h, dict) and h.get('from') == 'passed' for h in hist):
                 err(path, 'legacy pass was reissued after reopening without a fresh attempt binding')
@@ -360,7 +399,7 @@ def archive_attempt(node, **details):
 
 def record(tree, t_node, role, verdict, who, evidence=(), source='manual',
            t_exec=None, note='', *, build=None, attempt_id=None, root='.', manifest=None,
-           principal=None):
+           principal=None, checkpoint_evidence=None, steps_passed=None):
     """Record one role against the current build and evidence snapshot."""
     if role not in ROLES:
         raise Refused('role must be one of %s' % '/'.join(ROLES))
@@ -422,8 +461,14 @@ def record(tree, t_node, role, verdict, who, evidence=(), source='manual',
                 raise Refused('evidence path belongs to a previous verdict; capture fresh evidence: %s' % rel)
             stored = os.path.normpath(rel)
             hashes[stored] = evidence_hash(root, stored, manifest)
-        archive_attempt(node)
         attempt = {'id': uuid4().hex, 'build': build, 'sha256': hashes}
+        checkpoints = node_checkpoints(node)
+        if checkpoints:
+            if source != 'tool':
+                raise Refused('run the step runner to collect required checkpoint evidence')
+            attempt.update(checkpoint_evidence=checkpoint_evidence, steps_passed=steps_passed)
+            check_checkpoint_evidence(checkpoints, attempt, root)
+        archive_attempt(node)
         node.update(attempt=attempt, evidence=list(hashes),
                     confirmations={'tester': dict(entry, attempt_id=attempt['id'])})
         if st != 'testing':
